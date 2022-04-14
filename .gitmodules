@@ -1,0 +1,3 @@
+[submodule "src/arguments"]
+	path = src/arguments
+	url = git@github.com:ichlubna/arguments.git
