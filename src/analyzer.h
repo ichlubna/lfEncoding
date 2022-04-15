@@ -7,9 +7,10 @@
 class Analyzer
 {
     public:    
-    Analyzer();
+    Analyzer(std::string input);
+    void encode(std::string input); 
+    void decode(std::string input);
 
-    
     private:
 };
 
