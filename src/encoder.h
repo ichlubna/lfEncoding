@@ -34,6 +34,7 @@ class Encoder
             AVStream *stream;
             AVCodecContext *codecContext;
             AVFrame *frame;            
+            AVPacket *packet;
         };
 
         PairEncoder(std::string ref, std::string frame) : referenceFile(ref), frameFile(frame) {encode();};
