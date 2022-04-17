@@ -1,5 +1,11 @@
-#include <zlib.h>
+extern "C" { 
+#include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
+}
+#include <stdexcept>
+#include <zlib.h>
 #include <filesystem>
 #include <fstream>
 #include "encoder.h"
@@ -25,6 +31,8 @@ void Encoder::encodeFrame(std::string file)
 
 void Encoder::save(std::string path)
 {
+    //lfo contains the offsets into lfp (packet data) - the last offset is the index of the reference frame which is stored as first packet in lfp
+    offsets.push_back(referenceIndex);
     gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
     gzwrite(f, offsets.data(), offsets.size());
     gzclose(f);
@@ -52,7 +60,7 @@ Encoder::PairEncoder::Frame::Frame(std::string file)
      if(avcodec_open2(codecContext, codec, nullptr) < 0)
         throw std::runtime_error("Cannot open codec.");
     frame = av_frame_alloc();
-    auto *packet = av_packet_alloc();
+    packet = av_packet_alloc();
     av_read_frame(formatContext, packet);
     avcodec_send_packet(codecContext, packet);
     avcodec_send_packet(codecContext, nullptr);
@@ -78,49 +86,74 @@ Encoder::PairEncoder::Frame::~Frame()
     av_packet_free(&packet);
 }
 
+Encoder::PairEncoder::ConvertedFrame::ConvertedFrame(Frame *inputFrame, AVPixelFormat format)
+{
+    frame = av_frame_alloc();
+    auto input = inputFrame->getFrame();
+    frame->width = input->width;
+    frame->height = input->height;
+    frame->format = format;
+    av_frame_get_buffer(frame, 24);
+/*  av_frame_copy_props(frame, input);
+    frame->linesize[0] = input->width;
+    frame->linesize[1] = input->width;
+    frame->linesize[2] = input->width;
+    frame->format =format;
+    av_image_alloc(frame->data, frame->linesize, input->width, input->height, format, 1);
+    av_image_fill_arrays(frame->data, frame->linesize, nullptr, format, input->width,input->height, 1); */
+    auto swsContext = sws_getContext(   input->width, input->height, static_cast<AVPixelFormat>(input->format),
+                                        input->width, input->height, format, SWS_BICUBIC, nullptr, nullptr, nullptr);
+    if(!swsContext)
+        throw std::runtime_error("Cannot get conversion context!");
+    sws_scale(swsContext, input->data, input->linesize, 0, input->height, frame->data, frame->linesize);  
+}
+
+Encoder::PairEncoder::ConvertedFrame::~ConvertedFrame()
+{
+    av_frame_free(&frame);
+}
+
 void Encoder::PairEncoder::encode()
 {
     Frame reference(referenceFile); 
     Frame frame(referenceFile); 
     auto referenceFrame = reference.getFrame();
-    auto frameFrame = frame.getFrame();
-    
-    auto tempFile = std::filesystem::temp_directory_path().string()+"temp.mkv";
 
-    AVFormatContext *formatContext;
-    avformat_alloc_output_context2(&formatContext, nullptr, nullptr, tempFile.c_str());
-    AVStream *stream = avformat_new_stream(formatContext, NULL);
     std::string codecName = "libx265";
     std::string codecParamsName = "x265-params";
-    std::string codecParams = "keyint=60:min-keyint=60:scenecut=0:crf=20";
+    std::string codecParams = "log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20";
     auto codec = avcodec_find_encoder_by_name(codecName.c_str());
     auto codecContext = avcodec_alloc_context3(codec);
-    av_opt_set(codecContext->priv_data, codecParamsName.c_str(), codecParams.c_str(), 0);
+    if(!codecContext)
+        throw std::runtime_error("Cannot allocate output context!");
     codecContext->height = referenceFrame->height;
     codecContext->width = referenceFrame->width;
-    codecContext->pix_fmt = AV_PIX_FMT_YUV420P ;
+    codecContext->pix_fmt = outputPixelFormat;
+    codecContext->time_base = {1,1};
+    av_opt_set(codecContext->priv_data, codecParamsName.c_str(), codecParams.c_str(), 0);
+    if(avcodec_open2(codecContext, codec, nullptr) < 0)
+        throw std::runtime_error("Cannot open output codec!");
 
-    avcodec_open2(codecContext,codec, nullptr);
-    avcodec_parameters_from_context(stream->codecpar, codecContext);
-    avcodec_send_frame(codecContext, referenceFrame);
-    avcodec_send_frame(codecContext, frameFrame);
+    auto convertedReference = ConvertedFrame(&reference, outputPixelFormat);
+    auto convertedFrame = ConvertedFrame(&frame, outputPixelFormat);
+    avcodec_send_frame(codecContext, convertedReference.getFrame());
+    avcodec_send_frame(codecContext, convertedFrame.getFrame());
     avcodec_send_frame(codecContext, nullptr);
     bool waitForPacket = true;
     auto packet = av_packet_alloc();
     std::vector<uint8_t> *buffer = &referencePacket;
-    while(waitForPacket)
+    int i=0;
+    while(waitForPacket || i<2)
     {
         int err = avcodec_receive_packet(codecContext, packet);
         if(err == AVERROR_EOF || err == AVERROR(EAGAIN))
             waitForPacket = false;                
         else if(err < 0)
             throw std::runtime_error("Cannot receive packet");
-
-       buffer->insert(referencePacket.end(), &packet->data[0], &packet->data[packet->size]);
-       buffer = &framePacket;  
+        i++;
+        buffer->insert(buffer->end(), &packet->data[0], &packet->data[packet->size]);
+        buffer = &framePacket;  
     }
- 
-    avformat_free_context(formatContext);
     avcodec_free_context(&codecContext);
     av_packet_free(&packet);
 }

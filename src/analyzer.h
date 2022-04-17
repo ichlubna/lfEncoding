@@ -7,11 +7,12 @@
 class Analyzer
 {
     public:    
-    Analyzer(std::string input);
-    void encode(std::string input); 
+    Analyzer(std::string input, std::string output);
+    void encode(std::string input, std::string output); 
     void decode(std::string input);
 
     private:
+    void printBar(int total, int processed) const;
 };
 
 #endif
