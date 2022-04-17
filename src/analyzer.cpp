@@ -38,15 +38,16 @@ void Analyzer::encode(std::string input, std::string output)
     encoder.save(output);
 }
 
-void Analyzer::decode(std::string input)
+void Analyzer::decode(std::string input, float factor)
 {
-
+    Decoder decoder(input);
+    decoder.decodeFrame(factor, Decoder::NEAREST);
 }
 
-Analyzer::Analyzer(std::string input, std::string output)
+Analyzer::Analyzer(std::string input, std::string output, float factor)
 {
     if(std::filesystem::is_directory(input))
         encode(input, output);
     else
-        decode(input);
+        decode(input, factor);
 }

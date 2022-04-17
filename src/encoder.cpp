@@ -32,6 +32,7 @@ void Encoder::encodeFrame(std::string file)
 void Encoder::save(std::string path)
 {
     //lfo contains the offsets into lfp (packet data) - the last offset is the index of the reference frame which is stored as first packet in lfp
+    offsets.push_back(data.size()-1);
     offsets.push_back(referenceIndex);
     gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
     gzwrite(f, offsets.data(), offsets.size());

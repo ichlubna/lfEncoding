@@ -11,11 +11,11 @@ int main(int argc, char** argv)
                                 "               OR\n"
                                 "               with encoded files\n"
                                 "--output       Output directory\n"
-                                "--viewFactor   Float [0.0-1.0] indicating which view in 1D LF will be decoded\n"
+                                "--factor   Float [0.0-1.0] indicating which view in 1D LF will be decoded\n"
                                 };
         Arguments args(argc, argv);
         args.printHelpIfPresent(helpString);
-        Analyzer analyzer(args["--input"], args["--output"]); 
+        Analyzer analyzer(args["--input"], args["--output"], args["--factor"]); 
 	}
 	catch (const std::exception &e)
 	{
