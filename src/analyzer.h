@@ -7,7 +7,7 @@
 class Analyzer
 {
     public:    
-    Analyzer(std::string input, std::string output, float factor);
+    Analyzer(std::string input, std::string output, float factor=-1);
     void encode(std::string input, std::string output); 
     void decode(std::string input, float factor);
 

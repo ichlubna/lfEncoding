@@ -14,8 +14,12 @@ int main(int argc, char** argv)
                                 "--factor   Float [0.0-1.0] indicating which view in 1D LF will be decoded\n"
                                 };
         Arguments args(argc, argv);
-        args.printHelpIfPresent(helpString);
-        Analyzer analyzer(args["--input"], args["--output"], args["--factor"]); 
+        if(args.printHelpIfPresent(helpString))
+            return EXIT_SUCCESS;
+        if(args["--factor"])
+            Analyzer analyzer(args["--input"], args["--output"], args["--factor"]);
+        else 
+            Analyzer analyzer(args["--input"], args["--output"]); 
 	}
 	catch (const std::exception &e)
 	{

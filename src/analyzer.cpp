@@ -18,24 +18,27 @@ void Analyzer::encode(std::string input, std::string output)
         sorted.insert(file);
 
     std::cout << "Encoding..." << std::endl;
-    printBar(sorted.size(), 0);
+    size_t total = sorted.size()+1;
+    printBar(total, 0);
     int processed = 1;
 
     size_t referenceID = sorted.size()/2;
     auto referenceFrame = *std::next(sorted.begin(), referenceID);
     Encoder encoder(referenceID, referenceFrame);
 
-    printBar(sorted.size(), 1);
+    printBar(total, 1);
 
     for(auto const &file : sorted)
     {
         if(referenceFrame != file)
             encoder << file;
         processed++;
-        printBar(sorted.size(), processed);
+        printBar(total, processed);
     }
-    std::cout << std::endl;
     encoder.save(output);
+    processed++;
+    printBar(total, processed);
+    std::cout << std::endl;
 }
 
 void Analyzer::decode(std::string input, float factor)
@@ -46,7 +49,7 @@ void Analyzer::decode(std::string input, float factor)
 
 Analyzer::Analyzer(std::string input, std::string output, float factor)
 {
-    if(std::filesystem::is_directory(input))
+    if(factor<0)
         encode(input, output);
     else
         decode(input, factor);

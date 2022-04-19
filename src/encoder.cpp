@@ -19,8 +19,6 @@ void Encoder::addData(const std::vector<uint8_t> *packetData)
 
 Encoder::Encoder(uint32_t refID, std::string refFile) : referenceIndex{refID}, referenceFile{refFile} 
 {
-    PairEncoder referenceFrame(refFile, refFile);
-    addData(referenceFrame.getReferencePacket()); 
 }
 
 void Encoder::encodeFrame(std::string file)
@@ -31,13 +29,17 @@ void Encoder::encodeFrame(std::string file)
 
 void Encoder::save(std::string path)
 {
-    //lfo contains the offsets into lfp (packet data) - the last offset is the index of the reference frame which is stored as first packet in lfp
+    //lfo contains the offsets into lfp (packet data)
+    //the last offset is the index of the reference frame which is stored as first packet in lfp
     offsets.push_back(data.size()-1);
     offsets.push_back(referenceIndex);
     gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
     gzwrite(f, offsets.data(), offsets.size());
     gzclose(f);
-    std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
+    std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size());
+    //TODO mux in the encoding code 
+    std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -crf 20 -loglevel error -x265-params \"log-level=error\" "+path+"/reference.mkv" };
+    system(cmd.c_str());
 }
 
 Encoder::PairEncoder::Frame::Frame(std::string file)
