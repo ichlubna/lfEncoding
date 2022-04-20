@@ -57,19 +57,19 @@ void Decoder::initDecoder(std::string file)
     auto packet = av_packet_alloc();
     av_read_frame(formatContext, packet);
     av_packet_copy_props(decodingPacket, packet);
-    decodingPacket->flags = 0;
+    std::cerr << packet->side_data_elems << std::endl;
     //decodingPacket = av_packet_clone(packet);
     avcodec_send_packet(codecContext, packet);
 }
 
-
 void Decoder::loadPacketData(float factor, std::vector<uint8_t> *data)
 {
-    size_t index = round(factor*offsets.size()-2);
+    size_t index = round(factor*(offsets.size()-2));
     if (packetsFile.good())
     {
         packetsFile.seekg(offsets[index], std::ios::beg);
         size_t size = offsets[index+1] - offsets[index]; 
+        std::cerr << offsets.size() << " " << index << " " << offsets[index] << " " << offsets[index+1];
         data->resize(size);
         packetsFile.read(reinterpret_cast<char*>(data->data()), size); 
     }
@@ -95,12 +95,9 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
     std::vector<uint8_t> data;
     loadPacketData(factor, &data);
     av_packet_from_data(decodingPacket, data.data(), data.size());
-    decodingPacket->buf->size=data.size();
-    //decodingPacket->data = data.data();
-    //decodingPacket->size = data.size();
+    decodingPacket->flags = 0;
     
     auto frame = av_frame_alloc();
-    decodingPacket->flags = 0;
     if(avcodec_send_packet(codecContext, decodingPacket) < 0)
         throw std::runtime_error("Cannot send packet for decoding");
     avcodec_send_packet(codecContext, nullptr);

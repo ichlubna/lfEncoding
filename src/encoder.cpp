@@ -34,7 +34,7 @@ void Encoder::save(std::string path)
     offsets.push_back(data.size()-1);
     offsets.push_back(referenceIndex);
     gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
-    gzwrite(f, offsets.data(), offsets.size());
+    gzwrite(f, reinterpret_cast<uint8_t*>(offsets.data()), offsets.size()*4);
     gzclose(f);
     std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size());
     //TODO mux in the encoding code 
