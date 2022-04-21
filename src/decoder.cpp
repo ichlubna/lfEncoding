@@ -21,7 +21,7 @@ void Decoder::openFile(std::string path)
     {
         size = gzread(offsetsFile, buffer, LOAD_SIZE);
         if(size == 0)
-            return;
+            break;
         offsets.insert(offsets.end(), intBuffer, intBuffer+size/4);
     }
    /* 
@@ -30,8 +30,7 @@ void Decoder::openFile(std::string path)
     while(true)
         if(gzread(offsetsFile, offsets.data(), offsetsBufferSize*8) == 0)
             return;*/
-
-    packetsFile.open(path+"/packets.lfp", std::ifstream::in | std::ifstream::binary);    
+    packetsFile.open(path+"/packets.lfp", std::ifstream::in | std::ifstream::binary); 
 }
 
 void Decoder::initDecoder(std::string file)
@@ -57,8 +56,7 @@ void Decoder::initDecoder(std::string file)
     auto packet = av_packet_alloc();
     av_read_frame(formatContext, packet);
     av_packet_copy_props(decodingPacket, packet);
-    std::cerr << packet->side_data_elems << std::endl;
-    //decodingPacket = av_packet_clone(packet);
+    decodingPacket = av_packet_clone(packet);
     avcodec_send_packet(codecContext, packet);
 }
 
@@ -69,7 +67,6 @@ void Decoder::loadPacketData(float factor, std::vector<uint8_t> *data)
     {
         packetsFile.seekg(offsets[index], std::ios::beg);
         size_t size = offsets[index+1] - offsets[index]; 
-        std::cerr << offsets.size() << " " << index << " " << offsets[index] << " " << offsets[index+1];
         data->resize(size);
         packetsFile.read(reinterpret_cast<char*>(data->data()), size); 
     }
@@ -79,7 +76,7 @@ Decoder::Decoder(std::string path)
 {
     decodingPacket = av_packet_alloc();
     openFile(path);
-    initDecoder(path+"/reference.mkv");
+    initDecoder(path+"/reference.ts");
 }
 
 Decoder::~Decoder()
@@ -87,14 +84,17 @@ Decoder::~Decoder()
     avformat_close_input(&formatContext);
     avformat_free_context(formatContext);
     avcodec_free_context(&codecContext);
-    av_packet_free(&decodingPacket);
+    //av_packet_free(&decodingPacket);
 }
 
 void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
 {
     std::vector<uint8_t> data;
     loadPacketData(factor, &data);
+    //inserting NAL start code - AnnexB
+    //data.insert(data.begin(), {0,0,0,1});
     av_packet_from_data(decodingPacket, data.data(), data.size());
+     
     decodingPacket->flags = 0;
     
     auto frame = av_frame_alloc();
@@ -111,7 +111,7 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
             throw std::runtime_error("Cannot receive frame");
         if(err >= 0)
            decoded++; 
-        std::cerr << frame->width;
+        std::cerr << frame->width << std::endl;
     }
     av_frame_free(&frame);
 }

@@ -36,9 +36,10 @@ void Encoder::save(std::string path)
     gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
     gzwrite(f, reinterpret_cast<uint8_t*>(offsets.data()), offsets.size()*4);
     gzclose(f);
-    std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size());
+    std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
+
     //TODO mux in the encoding code 
-    std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -crf 20 -loglevel error -x265-params \"log-level=error\" "+path+"/reference.mkv" };
+    std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.ts" };
     system(cmd.c_str());
 }
 
