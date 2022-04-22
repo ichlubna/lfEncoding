@@ -7,6 +7,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 set(SOURCES 
 src/arguments/arguments.hpp
+src/loadingBar/loadingbar.hpp
 src/encoder.cpp
 src/decoder.cpp
 src/analyzer.cpp

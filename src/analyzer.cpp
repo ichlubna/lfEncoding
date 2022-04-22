@@ -3,6 +3,7 @@
 #include "analyzer.h"
 #include "encoder.h"
 #include "decoder.h"
+#include "loadingBar/loadingbar.hpp"
 
 void Analyzer::encode(std::string input, std::string output)
 { 
@@ -30,7 +31,6 @@ void Analyzer::encode(std::string input, std::string output)
         }
     encoder.save(output);
     bar.add();
-    std::cout << std::endl;
 }
 
 void Analyzer::decode(std::string input, float factor)

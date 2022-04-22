@@ -6,23 +6,6 @@
 #include <math.h>
 #include <iomanip>
 
-class LoadingBar
-{
-    public:
-    LoadingBar(size_t total, bool printWidthAdd=false) : totalCount{total}, addPrint{printWidthAdd} {};
-    size_t add(size_t number=1){count+=number; if(addPrint) print(); return count;};
-    void print()
-    {
-        float progress = (static_cast<float>(count)/totalCount)*100;
-        std::cout << "\r" << std::setprecision(2) << std::fixed << std::string(static_cast<size_t>(round(progress)), '|') << " " << progress << "%" << std::flush;
-    }
-
-    private:
-    size_t totalCount;
-    size_t count{0};
-    bool addPrint{false};
-};
-
 class Analyzer
 {
     public:    
