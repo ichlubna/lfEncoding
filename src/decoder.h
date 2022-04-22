@@ -17,6 +17,7 @@ class Decoder
     void initDecoder(std::string file);
     void openFile(std::string path);
     void loadPacketData(float factor, std::vector<uint8_t> *data);
+    void saveFrame(AVFrame *frame, std::string path);
     std::ifstream packetsFile;
     std::vector<uint32_t> offsets;
     AVFormatContext *formatContext;

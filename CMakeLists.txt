@@ -10,6 +10,7 @@ src/arguments/arguments.hpp
 src/encoder.cpp
 src/decoder.cpp
 src/analyzer.cpp
+src/utils.cpp
 src/main.cpp
 )
 

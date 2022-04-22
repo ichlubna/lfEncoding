@@ -4,12 +4,6 @@
 #include "encoder.h"
 #include "decoder.h"
 
-void Analyzer::printBar(int total, int processed) const
-{
-    int progress = round((processed/total)*100);
-    std::cout << "\r" << std::string(progress, '|') << " " << progress << "%" << std::flush;
-}
-
 void Analyzer::encode(std::string input, std::string output)
 { 
     auto dir = std::filesystem::directory_iterator(input); 
@@ -18,26 +12,24 @@ void Analyzer::encode(std::string input, std::string output)
         sorted.insert(file);
 
     std::cout << "Encoding..." << std::endl;
-    size_t total = sorted.size()+1;
-    printBar(total, 0);
-    int processed = 1;
+    
+    LoadingBar bar(sorted.size()+1, true);
+    bar.print();
 
     size_t referenceID = sorted.size()/2;
     auto referenceFrame = *std::next(sorted.begin(), referenceID);
     Encoder encoder(referenceID, referenceFrame);
 
-    printBar(total, 1);
+    bar.add();
 
     for(auto const &file : sorted)
-    {
         if(referenceFrame != file)
+        {
             encoder << file;
-        processed++;
-        printBar(total, processed);
-    }
+            bar.add();
+        }
     encoder.save(output);
-    processed++;
-    printBar(total, processed);
+    bar.add();
     std::cout << std::endl;
 }
 

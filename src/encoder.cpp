@@ -1,7 +1,6 @@
 extern "C" { 
 #include <libavcodec/avcodec.h>
 #include <libavutil/opt.h>
-#include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
 }
 #include <stdexcept>
@@ -9,11 +8,13 @@ extern "C" {
 #include <filesystem>
 #include <fstream>
 #include "encoder.h"
+#include "utils.h"
 
 void Encoder::addData(const std::vector<uint8_t> *packetData)
 {
     offsets.push_back(data.size()); 
     data.reserve(data.size() + packetData->size()); 
+    //data.insert(data.end(), {255,255,255,255,255,255,255,255});
     data.insert(data.end(), packetData->begin(), packetData->end());
 }
 
@@ -39,7 +40,7 @@ void Encoder::save(std::string path)
     std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
 
     //TODO mux in the encoding code 
-    std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.ts" };
+    std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.mkv" };
     system(cmd.c_str());
 }
 
@@ -90,37 +91,10 @@ Encoder::PairEncoder::Frame::~Frame()
     av_packet_free(&packet);
 }
 
-Encoder::PairEncoder::ConvertedFrame::ConvertedFrame(Frame *inputFrame, AVPixelFormat format)
-{
-    frame = av_frame_alloc();
-    auto input = inputFrame->getFrame();
-    frame->width = input->width;
-    frame->height = input->height;
-    frame->format = format;
-    av_frame_get_buffer(frame, 24);
-/*  av_frame_copy_props(frame, input);
-    frame->linesize[0] = input->width;
-    frame->linesize[1] = input->width;
-    frame->linesize[2] = input->width;
-    frame->format =format;
-    av_image_alloc(frame->data, frame->linesize, input->width, input->height, format, 1);
-    av_image_fill_arrays(frame->data, frame->linesize, nullptr, format, input->width,input->height, 1); */
-    auto swsContext = sws_getContext(   input->width, input->height, static_cast<AVPixelFormat>(input->format),
-                                        input->width, input->height, format, SWS_BICUBIC, nullptr, nullptr, nullptr);
-    if(!swsContext)
-        throw std::runtime_error("Cannot get conversion context!");
-    sws_scale(swsContext, input->data, input->linesize, 0, input->height, frame->data, frame->linesize);  
-}
-
-Encoder::PairEncoder::ConvertedFrame::~ConvertedFrame()
-{
-    av_frame_free(&frame);
-}
-
 void Encoder::PairEncoder::encode()
 {
     Frame reference(referenceFile); 
-    Frame frame(referenceFile); 
+    Frame frame(frameFile); 
     auto referenceFrame = reference.getFrame();
 
     std::string codecName = "libx265";
@@ -138,8 +112,8 @@ void Encoder::PairEncoder::encode()
     if(avcodec_open2(codecContext, codec, nullptr) < 0)
         throw std::runtime_error("Cannot open output codec!");
 
-    auto convertedReference = ConvertedFrame(&reference, outputPixelFormat);
-    auto convertedFrame = ConvertedFrame(&frame, outputPixelFormat);
+    auto convertedReference = Utils::ConvertedFrame(reference.getFrame(), outputPixelFormat);
+    auto convertedFrame = Utils::ConvertedFrame(frame.getFrame(), outputPixelFormat);
     avcodec_send_frame(codecContext, convertedReference.getFrame());
     avcodec_send_frame(codecContext, convertedFrame.getFrame());
     avcodec_send_frame(codecContext, nullptr);
@@ -158,6 +132,7 @@ void Encoder::PairEncoder::encode()
         buffer->insert(buffer->end(), &packet->data[0], &packet->data[packet->size]);
         buffer = &framePacket;  
     }
+    //std::cerr << referencePacket.size() << std::endl;
     avcodec_free_context(&codecContext);
     av_packet_free(&packet);
 }

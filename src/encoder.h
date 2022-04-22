@@ -38,18 +38,6 @@ class Encoder
             AVPacket *packet;
         };
 
-        class ConvertedFrame
-        {
-            public:
-            ConvertedFrame(Frame *frame, AVPixelFormat format);
-            ~ConvertedFrame();
-            const AVFrame* getFrame() const { return frame;}
-
-            private:
-            AVFrame *frame;
-            struct SwsContext *swsContext;
-        };
-
         PairEncoder(std::string ref, std::string frame) : referenceFile(ref), frameFile(frame) {encode();};
         const std::vector<uint8_t>* getFramePacket() const {return &framePacket;};
         const std::vector<uint8_t>* getReferencePacket() const {return &referencePacket;};

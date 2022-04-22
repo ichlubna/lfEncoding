@@ -9,6 +9,7 @@ extern "C" {
 #include <filesystem>
 #include <fstream>
 #include "decoder.h"
+#include "utils.h"
 
 void Decoder::openFile(std::string path)
 {
@@ -87,6 +88,42 @@ Decoder::~Decoder()
     //av_packet_free(&decodingPacket);
 }
 
+void Decoder::saveFrame(AVFrame *frame, std::string path)
+{
+    auto outCodec = avcodec_find_encoder(AV_CODEC_ID_PNG);
+    if (!outCodec) 
+        throw std::runtime_error("Cannot find output codec");
+    auto outContext = avcodec_alloc_context3(outCodec);
+    if (!outContext)
+        throw std::runtime_error("Cannot allocate output codec context");
+
+    outContext->pix_fmt = AV_PIX_FMT_RGB24;
+    outContext->height = frame->height;
+    outContext->width = frame->width;
+    outContext->time_base = AVRational{1,1};
+
+    if (avcodec_open2(outContext, outCodec, nullptr) < 0) 
+        throw std::runtime_error("Cannot allocate open codec");
+
+    auto rgbFrame = Utils::ConvertedFrame(frame,  AV_PIX_FMT_RGB24);
+    auto packet = av_packet_alloc();
+    avcodec_send_frame(outContext, rgbFrame.getFrame());
+    avcodec_send_frame(outContext, nullptr);
+    bool waitForPacket = true;
+    while(waitForPacket)
+    {
+        int err = avcodec_receive_packet(outContext, packet);
+        if(err == AVERROR_EOF || err == AVERROR(EAGAIN))
+            waitForPacket = false;                
+        else if(err < 0)
+            throw std::runtime_error("Cannot receive packet");
+        break;
+    }
+    std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(packet->data), packet->size);
+    avcodec_free_context(&outContext);
+    av_packet_free(&packet);
+}
+
 void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
 {
     std::vector<uint8_t> data;
@@ -111,7 +148,8 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
             throw std::runtime_error("Cannot receive frame");
         if(err >= 0)
            decoded++; 
-        std::cerr << frame->width << std::endl;
+        if(decoded == 1)
+            saveFrame(frame, "./output.png");
     }
     av_frame_free(&frame);
 }
