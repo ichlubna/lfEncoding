@@ -10,7 +10,7 @@ class Utils
         public:
         ConvertedFrame(const AVFrame *frame, AVPixelFormat format);
         ~ConvertedFrame();
-        const AVFrame* getFrame() const { return outputFrame;}
+        AVFrame* getFrame() const { return outputFrame;}
 
         private:
         AVFrame *outputFrame;

@@ -128,8 +128,8 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
 {
     std::vector<uint8_t> data;
     loadPacketData(factor, &data);
-    //inserting NAL start code - AnnexB
-    //data.insert(data.begin(), {0,0,0,1});
+    //inserting NAL start code - AnnexB, and header
+    data.insert(data.begin(), {0,0,0,1,2,1,208,9,126});
     av_packet_from_data(decodingPacket, data.data(), data.size());
      
     decodingPacket->flags = 0;

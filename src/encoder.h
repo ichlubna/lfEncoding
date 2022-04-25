@@ -19,6 +19,23 @@ class Encoder
     void encodeFrame(std::string file);
     void addData(const std::vector<uint8_t> *packetData);
 
+    class FFEncoder
+    {
+        public:
+        FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt);
+        ~FFEncoder();
+        friend void operator<<(FFEncoder &e, AVFrame *frame){e.encodeFrame(frame);}
+        friend void operator>>(FFEncoder &e, AVPacket **packetPtr){*packetPtr = e.retrievePacket();}
+        private:
+        void encodeFrame(AVFrame *frame);
+        AVPacket* retrievePacket();
+        //AVFormatContext *formatContext;
+        const AVCodec *codec;
+        AVStream *stream;
+        AVCodecContext *codecContext;
+        AVPacket *packet;
+    };
+
     class PairEncoder
     {
         public:

@@ -13,9 +13,13 @@ extern "C" {
 void Encoder::addData(const std::vector<uint8_t> *packetData)
 {
     offsets.push_back(data.size()); 
+    constexpr size_t HEADER_SIZE{9};
     data.reserve(data.size() + packetData->size()); 
-    //data.insert(data.end(), {255,255,255,255,255,255,255,255});
-    data.insert(data.end(), packetData->begin(), packetData->end());
+    data.insert(data.end(), packetData->begin()+HEADER_SIZE, packetData->end());
+    /*for (int i=0; i<50; i++)
+    std::cerr << static_cast<unsigned int>(packetData->at(i)) << " ";
+    std::cerr << std::endl << std::endl; 
+    std::cerr << packetData->size() <<std::endl;*/
 }
 
 Encoder::Encoder(uint32_t refID, std::string refFile) : referenceIndex{refID}, referenceFile{refFile} 
@@ -42,6 +46,53 @@ void Encoder::save(std::string path)
     //TODO mux in the encoding code 
     std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.mkv" };
     system(cmd.c_str());
+}
+
+Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt)
+{
+    std::string codecName = "libx265";
+    std::string codecParamsName = "x265-params";
+    std::string codecParams = "log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20";
+    codec = avcodec_find_encoder_by_name(codecName.c_str());
+    codecContext = avcodec_alloc_context3(codec);
+    if(!codecContext)
+        throw std::runtime_error("Cannot allocate output context!");
+    codecContext->height = height;
+    codecContext->width = width;
+    codecContext->pix_fmt = pixFmt;
+    codecContext->time_base = {1,60};
+    av_opt_set(codecContext->priv_data, codecParamsName.c_str(), codecParams.c_str(), 0);
+    if(avcodec_open2(codecContext, codec, nullptr) < 0)
+        throw std::runtime_error("Cannot open output codec!");
+    packet = av_packet_alloc();
+}
+
+Encoder::FFEncoder::~FFEncoder()
+{
+    //avformat_close_input(&formatContext);
+    //avformat_free_context(formatContext);
+    avcodec_free_context(&codecContext);
+    av_packet_free(&packet);
+}
+
+AVPacket* Encoder::FFEncoder::retrievePacket()
+{
+    bool waitForPacket = true;
+    while(waitForPacket)
+    {
+        int err = avcodec_receive_packet(codecContext, packet);
+        if(err == AVERROR_EOF || err == AVERROR(EAGAIN))
+            return nullptr;
+        else if(err < 0)
+            throw std::runtime_error("Cannot receive packet");
+        waitForPacket = false;
+    }
+    return packet;
+}
+
+void Encoder::FFEncoder::encodeFrame(AVFrame *frame)
+{
+    avcodec_send_frame(codecContext, frame);
 }
 
 Encoder::PairEncoder::Frame::Frame(std::string file)
@@ -97,42 +148,25 @@ void Encoder::PairEncoder::encode()
     Frame frame(frameFile); 
     auto referenceFrame = reference.getFrame();
 
-    std::string codecName = "libx265";
-    std::string codecParamsName = "x265-params";
-    std::string codecParams = "log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20";
-    auto codec = avcodec_find_encoder_by_name(codecName.c_str());
-    auto codecContext = avcodec_alloc_context3(codec);
-    if(!codecContext)
-        throw std::runtime_error("Cannot allocate output context!");
-    codecContext->height = referenceFrame->height;
-    codecContext->width = referenceFrame->width;
-    codecContext->pix_fmt = outputPixelFormat;
-    codecContext->time_base = {1,1};
-    av_opt_set(codecContext->priv_data, codecParamsName.c_str(), codecParams.c_str(), 0);
-    if(avcodec_open2(codecContext, codec, nullptr) < 0)
-        throw std::runtime_error("Cannot open output codec!");
+    FFEncoder encoder(referenceFrame->width, referenceFrame->height, outputPixelFormat); 
 
     auto convertedReference = Utils::ConvertedFrame(reference.getFrame(), outputPixelFormat);
     auto convertedFrame = Utils::ConvertedFrame(frame.getFrame(), outputPixelFormat);
-    avcodec_send_frame(codecContext, convertedReference.getFrame());
-    avcodec_send_frame(codecContext, convertedFrame.getFrame());
-    avcodec_send_frame(codecContext, nullptr);
-    bool waitForPacket = true;
-    auto packet = av_packet_alloc();
-    std::vector<uint8_t> *buffer = &referencePacket;
-    int i=0;
-    while(waitForPacket || i<2)
+    
+    encoder << convertedReference.getFrame();
+    AVFrame *convertedFrameRaw = convertedFrame.getFrame();
+    convertedFrameRaw->key_frame = 0;
+    encoder << convertedFrameRaw;
+    encoder << nullptr;
+
+    std::vector<uint8_t> *buffer = &referencePacket; 
+    AVPacket *packet;
+    for(int i=0; i<2; i++)
     {
-        int err = avcodec_receive_packet(codecContext, packet);
-        if(err == AVERROR_EOF || err == AVERROR(EAGAIN))
-            waitForPacket = false;                
-        else if(err < 0)
-            throw std::runtime_error("Cannot receive packet");
-        i++;
+        encoder >> &packet; 
+        if(!packet)
+            throw std::runtime_error("Cannot receieve packet!");
         buffer->insert(buffer->end(), &packet->data[0], &packet->data[packet->size]);
-        buffer = &framePacket;  
+        buffer = &framePacket;
     }
-    //std::cerr << referencePacket.size() << std::endl;
-    avcodec_free_context(&codecContext);
-    av_packet_free(&packet);
 }
