@@ -26,6 +26,37 @@ Encoder::Encoder(uint32_t refID, std::string refFile) : referenceIndex{refID}, r
 {
 }
 
+#ifdef av_err2str
+#undef av_err2str
+#include <string>
+av_always_inline std::string av_err2string(int errnum) {
+    char str[AV_ERROR_MAX_STRING_SIZE];
+    return av_make_error_string(str, AV_ERROR_MAX_STRING_SIZE, errnum);
+}
+#define av_err2str(err) av_err2string(err).c_str()
+#endif  // av_err2str
+
+void Encoder::encodeReference(std::string path)
+{
+    PairEncoder::Frame frame(referenceFile);
+    auto rawFrame = frame.getFrame();
+    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat);
+    auto converted = Utils::ConvertedFrame(rawFrame, outputPixelFormat);
+
+    encoder << converted.getFrame();
+    encoder << nullptr;
+    AVPacket *packet;
+    encoder >> &packet;
+
+    packet->duration = 1;
+    packet->dts = 0;
+    packet->pts = 0;
+
+    FFMuxer muxer(path+"/reference.ts", encoder.getCodecContext());
+    muxer << packet;
+    muxer.finish();
+}
+
 void Encoder::encodeFrame(std::string file)
 {
     PairEncoder newFrame(referenceFile, file);
@@ -43,9 +74,44 @@ void Encoder::save(std::string path)
     gzclose(f);
     std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
 
+    encodeReference(path);    
     //TODO mux in the encoding code 
-    std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.mkv" };
-    system(cmd.c_str());
+    //std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.mkv" };
+    //system(cmd.c_str());
+}
+
+Encoder::FFMuxer::FFMuxer(std::string fileName, const AVCodecContext *encoderCodecContext)
+{
+    avformat_alloc_output_context2(&muxerFormatContext, nullptr, nullptr, fileName.c_str());
+    if(!muxerFormatContext)
+        throw std::runtime_error("Cannot allocate output context!");
+    auto stream = avformat_new_stream(muxerFormatContext, nullptr);
+    avcodec_parameters_from_context(stream->codecpar, encoderCodecContext);
+    stream->time_base = encoderCodecContext->time_base;
+    if(avio_open(&muxerFormatContext->pb, fileName.c_str(), AVIO_FLAG_WRITE) < 0)
+        throw std::runtime_error("Cannot open the output file");
+    std::cerr << av_err2str(avformat_write_header(muxerFormatContext, nullptr));
+    if(avformat_write_header(muxerFormatContext, nullptr) < 0)
+        throw std::runtime_error("Cannot write the header");
+}
+
+void Encoder::FFMuxer::writePacket(AVPacket *packet)
+{
+    if(av_write_frame(muxerFormatContext, packet) < 0)
+        throw std::runtime_error("Cannot write packet!");
+}
+
+void Encoder::FFMuxer::finish()
+{
+    finished = true;
+    av_write_trailer(muxerFormatContext);
+}
+
+Encoder::FFMuxer::~FFMuxer()
+{
+    if(!finished)
+        finish();
+    avformat_free_context(muxerFormatContext); 
 }
 
 Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt)

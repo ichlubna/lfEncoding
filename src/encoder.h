@@ -9,6 +9,7 @@ class Encoder
     public:
     Encoder(uint32_t refID, std::string refFile);
     void save(std::string path);
+    static const AVPixelFormat outputPixelFormat{AV_PIX_FMT_YUV444P};
     friend void operator<<(Encoder &e, std::string file){e.encodeFrame(file);}
 
     private:
@@ -18,6 +19,21 @@ class Encoder
     std::string referenceFile;
     void encodeFrame(std::string file);
     void addData(const std::vector<uint8_t> *packetData);
+    void encodeReference(std::string path);
+
+    class FFMuxer
+    {
+        public:
+        FFMuxer(std::string fileName, const AVCodecContext *ecnoderCodecContext);
+        ~FFMuxer();
+        friend void operator<<(FFMuxer &m, AVPacket *packet){m.writePacket(packet);}
+        void finish();
+
+        private:
+        void writePacket(AVPacket *packet);
+        AVFormatContext *muxerFormatContext;
+        bool finished{false};
+    };
 
     class FFEncoder
     {
@@ -26,6 +42,8 @@ class Encoder
         ~FFEncoder();
         friend void operator<<(FFEncoder &e, AVFrame *frame){e.encodeFrame(frame);}
         friend void operator>>(FFEncoder &e, AVPacket **packetPtr){*packetPtr = e.retrievePacket();}
+        const AVCodecContext *getCodecContext() const {return codecContext;};
+
         private:
         void encodeFrame(AVFrame *frame);
         AVPacket* retrievePacket();
@@ -61,7 +79,6 @@ class Encoder
 
         private:
         void encode();
-        AVPixelFormat outputPixelFormat{AV_PIX_FMT_YUV444P};
         std::string referenceFile; 
         std::string frameFile; 
         std::vector<uint8_t> framePacket;
