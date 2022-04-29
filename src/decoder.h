@@ -8,7 +8,7 @@ extern "C" {
 class Decoder
 {
     public:
-    enum Interpolation {NEAREST};
+    enum Interpolation {NEAREST, BLEND};
     Decoder(std::string path);
     ~Decoder();
     void decodeFrame(float factor, enum Interpolation);
@@ -16,7 +16,7 @@ class Decoder
     private:
     void initDecoder(std::string file);
     void openFile(std::string path);
-    void loadPacketData(float factor, std::vector<uint8_t> *data);
+    void loadPacketData(size_t index, std::vector<uint8_t> *data);
     void saveFrame(AVFrame *frame, std::string path);
     std::ifstream packetsFile;
     std::vector<uint32_t> offsets;

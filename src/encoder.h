@@ -1,7 +1,9 @@
 extern "C" { 
 #include <libavformat/avformat.h>
 }
+#include <filesystem>
 #include <vector>
+#include <set>
 #include "analyzer.h"
 
 class Encoder
@@ -11,6 +13,7 @@ class Encoder
     void save(std::string path);
     static const AVPixelFormat outputPixelFormat{AV_PIX_FMT_YUV444P};
     friend void operator<<(Encoder &e, std::string file){e.encodeFrame(file);}
+    void encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path) const;
 
     private:
     std::vector<uint8_t> data;

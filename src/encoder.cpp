@@ -16,25 +16,44 @@ void Encoder::addData(const std::vector<uint8_t> *packetData)
     constexpr size_t HEADER_SIZE{9};
     data.reserve(data.size() + packetData->size()); 
     data.insert(data.end(), packetData->begin()+HEADER_SIZE, packetData->end());
-    /*for (int i=0; i<50; i++)
-    std::cerr << static_cast<unsigned int>(packetData->at(i)) << " ";
-    std::cerr << std::endl << std::endl; 
-    std::cerr << packetData->size() <<std::endl;*/
 }
 
 Encoder::Encoder(uint32_t refID, std::string refFile) : referenceIndex{refID}, referenceFile{refFile} 
 {
 }
 
-#ifdef av_err2str
-#undef av_err2str
-#include <string>
-av_always_inline std::string av_err2string(int errnum) {
-    char str[AV_ERROR_MAX_STRING_SIZE];
-    return av_make_error_string(str, AV_ERROR_MAX_STRING_SIZE, errnum);
+void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path) const
+{
+    PairEncoder::Frame check(*sortedFiles->begin());
+    auto rawFrame = check.getFrame();
+    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat);
+    FFMuxer muxer(path+"/classic.ts", encoder.getCodecContext());
+    AVPacket *packet;
+    size_t sent{0};
+    size_t counter{0};
+    
+
+    for(auto const &file : *sortedFiles)
+    {    
+        PairEncoder::Frame frame(file);
+        auto converted = Utils::ConvertedFrame(rawFrame, outputPixelFormat);
+        encoder << converted.getFrame();
+        sent++;
+        if(sent == sortedFiles->size())
+            encoder << nullptr;
+
+        while(true)
+        {
+            encoder >> &packet;
+            if(packet == nullptr)
+                break;
+            packet->duration = 1;
+            counter++;
+            packet->dts = packet->pts = counter;
+            muxer << packet;
+        }
+    }
 }
-#define av_err2str(err) av_err2string(err).c_str()
-#endif  // av_err2str
 
 void Encoder::encodeReference(std::string path)
 {
@@ -66,7 +85,7 @@ void Encoder::encodeFrame(std::string file)
 void Encoder::save(std::string path)
 {
     //lfo contains the offsets into lfp (packet data)
-    //the last offset is the index of the reference frame which is stored as first packet in lfp
+    //the last offset is the index of the reference frame
     offsets.push_back(data.size()-1);
     offsets.push_back(referenceIndex);
     gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
@@ -75,9 +94,6 @@ void Encoder::save(std::string path)
     std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
 
     encodeReference(path);    
-    //TODO mux in the encoding code 
-    //std::string cmd{"ffmpeg -i "+referenceFile+" -y -c:v libx265 -pix_fmt yuv444p -loglevel error -x265-params \"log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20\" "+path+"/reference.mkv" };
-    //system(cmd.c_str());
 }
 
 Encoder::FFMuxer::FFMuxer(std::string fileName, const AVCodecContext *encoderCodecContext)
@@ -90,7 +106,6 @@ Encoder::FFMuxer::FFMuxer(std::string fileName, const AVCodecContext *encoderCod
     stream->time_base = encoderCodecContext->time_base;
     if(avio_open(&muxerFormatContext->pb, fileName.c_str(), AVIO_FLAG_WRITE) < 0)
         throw std::runtime_error("Cannot open the output file");
-    std::cerr << av_err2str(avformat_write_header(muxerFormatContext, nullptr));
     if(avformat_write_header(muxerFormatContext, nullptr) < 0)
         throw std::runtime_error("Cannot write the header");
 }

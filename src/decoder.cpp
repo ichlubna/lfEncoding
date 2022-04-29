@@ -8,6 +8,7 @@ extern "C" {
 #include <zlib.h>
 #include <filesystem>
 #include <fstream>
+#include <cmath>
 #include "decoder.h"
 #include "utils.h"
 
@@ -61,9 +62,8 @@ void Decoder::initDecoder(std::string file)
     avcodec_send_packet(codecContext, packet);
 }
 
-void Decoder::loadPacketData(float factor, std::vector<uint8_t> *data)
+void Decoder::loadPacketData(size_t index, std::vector<uint8_t> *data)
 {
-    size_t index = round(factor*(offsets.size()-2));
     if (packetsFile.good())
     {
         packetsFile.seekg(offsets[index], std::ios::beg);
@@ -126,30 +126,59 @@ void Decoder::saveFrame(AVFrame *frame, std::string path)
 
 void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
 {
-    std::vector<uint8_t> data;
-    loadPacketData(factor, &data);
-    //inserting NAL start code - AnnexB, and header
-    data.insert(data.begin(), {0,0,0,1,2,1,208,9,126});
-    av_packet_from_data(decodingPacket, data.data(), data.size());
-     
-    decodingPacket->flags = 0;
+    auto method = interpolation;
+    float position {factor*(offsets.size()-2)};
+    float fract = position-floor(position);
+    if(fract < 0.00001)
+        method = NEAREST;
+    std::vector<size_t> indices;
+    if(method == NEAREST)
+        indices.push_back(round(position));
+    else if(method == BLEND)
+    {
+        indices.push_back(static_cast<size_t>(floor(position)));
+        indices.push_back(static_cast<size_t>(ceil(position)));
+    }
+    
+    bool reference{false};
+    for(auto const& index : indices)
+    {std::cerr << index << std::endl;
+        size_t id = index;
+        if(index > offsets.back())
+            id = index-1;
+        else if(index == offsets.back())
+        {
+            reference = true;
+            continue;
+        }
+         
+        std::vector<uint8_t> data;
+        loadPacketData(id, &data);
+        //inserting NAL start code - AnnexB, and header
+        data.insert(data.begin(), {0,0,0,1,2,1,208,9,126});
+        av_packet_from_data(decodingPacket, data.data(), data.size());
+        decodingPacket->flags = 0; 
+        //decodingPacket->pts = index;
+        //decodingPacket->dts = index;
+        if(avcodec_send_packet(codecContext, decodingPacket) < 0)
+            throw std::runtime_error("Cannot send packet for decoding");
+    }
+    avcodec_send_packet(codecContext, nullptr);
     
     auto frame = av_frame_alloc();
-    if(avcodec_send_packet(codecContext, decodingPacket) < 0)
-        throw std::runtime_error("Cannot send packet for decoding");
-    avcodec_send_packet(codecContext, nullptr);
     int decoded = 0;
-    while(decoded < 2)
+    while(true)
     {
         int err = avcodec_receive_frame(codecContext, frame);
         if(err == AVERROR_EOF || err == AVERROR(EAGAIN))
-            decoded = 999;
+            break;
         else if(err < 0)
             throw std::runtime_error("Cannot receive frame");
-        if(err >= 0)
-           decoded++; 
-        if(decoded == 1)
-            saveFrame(frame, "./output.png");
+        if(decoded > 0 || reference)
+            saveFrame(frame, "./output"+std::to_string(decoded)+".png");
+        decoded++; 
     }
     av_frame_free(&frame);
+
+    //TODO blending?
 }
