@@ -40,8 +40,19 @@ void Analyzer::encode(std::string input, std::string output)
     auto classicEnd = std::chrono::steady_clock::now();
     bar.add();
 
-    std::cout << "Encoding time: " << std::chrono::duration_cast<std::chrono::milliseconds>(encodeEnd-encodeStart).count() << "ms" << std::endl;
-    std::cout << "Encoding reference time: " << std::chrono::duration_cast<std::chrono::milliseconds>(classicEnd-classicStart).count() << "ms" << std::endl;
+    std::cout << std::endl;
+    std::cout << "Encoding time: " << std::chrono::duration_cast<std::chrono::milliseconds>(encodeEnd-encodeStart).count()/1000.0f << "s" << std::endl;
+    std::cout << "Encoding classic time: " << std::chrono::duration_cast<std::chrono::milliseconds>(classicEnd-classicStart).count()/1000.0f << "s" << std::endl;
+    size_t referenceSize =  std::filesystem::file_size(output+"/reference.ts"); 
+    size_t offsetsSize = std::filesystem::file_size(output+"/offsets.lfo"); 
+    size_t packetsSize = std::filesystem::file_size(output+"/packets.lfp"); 
+    size_t classicSize = std::filesystem::file_size(output+"/classic.ts"); 
+    size_t totalSize = referenceSize+offsetsSize+packetsSize; 
+    std::cout << "Encoded size: total - " << totalSize << std::endl;
+    std::cout << "  reference - " << (static_cast<float>(referenceSize)/totalSize)*100 << "%" << std::endl;
+    std::cout << "  offsets - " << (static_cast<float>(offsetsSize)/totalSize)*100 << "%" << std::endl;
+    std::cout << "  packets - " << (static_cast<float>(packetsSize)/totalSize)*100 << "%" << std::endl;
+    std::cout << "Encoded classic size: total - " << classicSize << std::endl;
 }
 
 void Analyzer::decode(std::string input, float factor, int method)
