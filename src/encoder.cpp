@@ -22,12 +22,12 @@ Encoder::Encoder(uint32_t refID, std::string refFile) : referenceIndex{refID}, r
 {
 }
 
-void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path) const
+void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path, bool allKey) const
 {
     PairEncoder::Frame check(*sortedFiles->begin());
     auto rawFrame = check.getFrame();
-    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat);
-    FFMuxer muxer(path+"/classic.ts", encoder.getCodecContext());
+    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat, allKey);
+    FFMuxer muxer(path, encoder.getCodecContext());
     AVPacket *packet;
     size_t sent{0};
     size_t counter{0};
@@ -36,8 +36,10 @@ void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::s
     for(auto const &file : *sortedFiles)
     {    
         PairEncoder::Frame frame(file);
-        auto converted = Utils::ConvertedFrame(rawFrame, outputPixelFormat);
-        encoder << converted.getFrame();
+        auto converted = Utils::ConvertedFrame(frame.getFrame(), outputPixelFormat);
+        auto rawFrame = converted.getFrame();
+        rawFrame->key_frame = 1;
+        encoder << rawFrame;// converted.getFrame();
         sent++;
         if(sent == sortedFiles->size())
             encoder << nullptr;
@@ -129,11 +131,14 @@ Encoder::FFMuxer::~FFMuxer()
     avformat_free_context(muxerFormatContext); 
 }
 
-Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt)
+Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, bool allKey)
 {
     std::string codecName = "libx265";
     std::string codecParamsName = "x265-params";
-    std::string codecParams = "log-level=error:keyint=60:min-keyint=60:scenecut=0:crf=20";
+    std::string keyInterval = "1000";
+    if(allKey)
+        keyInterval = "1";
+    std::string codecParams = "log-level=error:keyint="+keyInterval+":min-keyint="+keyInterval+":scenecut=0:crf=20";
     codec = avcodec_find_encoder_by_name(codecName.c_str());
     codecContext = avcodec_alloc_context3(codec);
     if(!codecContext)

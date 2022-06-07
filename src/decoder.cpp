@@ -35,29 +35,33 @@ void Decoder::openFile(std::string path)
     packetsFile.open(path+"/packets.lfp", std::ifstream::in | std::ifstream::binary); 
 }
 
-void Decoder::initDecoder(std::string file)
+void Decoder::initDecoderParams(AVFormatContext **inputFormatContext, AVCodec **inputCodec, AVCodecContext **inputCodecContext, std::string inputFile)
 {
-    formatContext = avformat_alloc_context();
-    if (avformat_open_input(&formatContext, file.c_str(), nullptr, nullptr) != 0)
-        throw std::runtime_error("Cannot open file: "+file);
-    if (avformat_find_stream_info(formatContext, nullptr) < 0) 
-        throw std::runtime_error("Cannot find stream info in file: "+file);
-    AVCodec *codec;
-    auto videoStreamId = av_find_best_stream(formatContext, AVMEDIA_TYPE_VIDEO, -1, -1, const_cast<const AVCodec**>(&codec), 0);
+    *inputFormatContext = avformat_alloc_context();
+    if (avformat_open_input(inputFormatContext, inputFile.c_str(), nullptr, nullptr) != 0)
+        throw std::runtime_error("Cannot open file: "+inputFile);
+    if (avformat_find_stream_info(*inputFormatContext, nullptr) < 0) 
+        throw std::runtime_error("Cannot find stream info in file: "+inputFile);
+    auto videoStreamId = av_find_best_stream(*inputFormatContext, AVMEDIA_TYPE_VIDEO, -1, -1, const_cast<const AVCodec**>(inputCodec), 0);
     if(videoStreamId < 0)
         throw std::runtime_error("No video stream available");
     if(!codec)
         throw std::runtime_error("No suitable codec found");
-    codecContext = avcodec_alloc_context3(codec);
+    *inputCodecContext = avcodec_alloc_context3(*inputCodec);
     if(!codecContext)
         throw std::runtime_error("Cannot allocate codec context memory");
-    if(avcodec_parameters_to_context(codecContext, formatContext->streams[videoStreamId]->codecpar)<0)
+    if(avcodec_parameters_to_context(*inputCodecContext, (*inputFormatContext)->streams[videoStreamId]->codecpar)<0)
         throw std::runtime_error{"Cannot use the file parameters in context"};
-     if(avcodec_open2(codecContext, codec, nullptr) < 0)
+     if(avcodec_open2(*inputCodecContext, *inputCodec, nullptr) < 0)
         throw std::runtime_error("Cannot open codec.");
+}
+
+void Decoder::initDecoder(std::string file)
+{
+    initDecoderParams(&formatContext, &codec, &codecContext, file);
     auto packet = av_packet_alloc();
     av_read_frame(formatContext, packet);
-    av_packet_copy_props(decodingPacket, packet);
+    //av_packet_copy_props(decodingPacket, packet);
     decodingPacket = av_packet_clone(packet);
     avcodec_send_packet(codecContext, packet);
 }
@@ -124,7 +128,7 @@ void Decoder::saveFrame(AVFrame *frame, std::string path)
     av_packet_free(&packet);
 }
 
-void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
+void Decoder::decodeFrame(float factor, enum Interpolation interpolation, std::string outPath)
 {
     auto method = interpolation;
     float position {factor*(offsets.size()-2)};
@@ -142,7 +146,7 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
     
     bool reference{false};
     for(auto const& index : indices)
-    {std::cerr << index << std::endl;
+    {
         size_t id = index;
         if(index > offsets.back())
             id = index-1;
@@ -175,10 +179,89 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation)
         else if(err < 0)
             throw std::runtime_error("Cannot receive frame");
         if(decoded > 0 || reference)
-            saveFrame(frame, "./output"+std::to_string(decoded)+".png");
+            saveFrame(frame, outPath+"/"+std::to_string(indices.front())+".png");//std::to_string(decoded)+".png");
         decoded++; 
     }
     av_frame_free(&frame);
 
     //TODO blending?
 }
+
+void Decoder::decodeFrameClassic(float factor, enum Interpolation method, std::string file, std::string outPath)
+{
+    //TODO interpolation method
+
+    AVFormatContext *classicFormatContext;
+    AVCodec *classicCodec;
+    AVStream *classicStream;
+    AVCodecContext *classicCodecContext;
+
+    initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
+    auto classicPacket = av_packet_alloc();
+    auto classicFrame = av_frame_alloc();
+
+    size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
+    //assuming there are no keyframes except for the first one
+    size_t counter = 0; 
+    bool decoding = true;
+    av_read_frame(classicFormatContext, classicPacket);
+    while(decoding)
+    {
+        int err=0;
+        while(err == 0)
+        {
+            if((err = avcodec_send_packet(classicCodecContext, classicPacket)) != 0)
+                break;
+            av_packet_unref(classicPacket);
+            err = av_read_frame(classicFormatContext, classicPacket);
+            if(err == AVERROR_EOF)
+                classicPacket=nullptr;
+        }
+
+        bool waitForFrame = true;
+        while(waitForFrame)
+        {
+            int err = avcodec_receive_frame(classicCodecContext, classicFrame);
+            if(err == AVERROR(EAGAIN))
+                break;
+            if(err == AVERROR_EOF)
+                waitForFrame = false;                
+            else if(err < 0)
+                throw std::runtime_error("Cannot receive frame");
+            counter++;
+            if(counter >= position)
+            {
+                decoding = false;
+                break;
+            }
+        }
+    }  
+    saveFrame(classicFrame, outPath+"/"+std::to_string(counter)+"-classic.png");
+    av_packet_free(&classicPacket);
+    av_frame_free(&classicFrame);
+}
+
+void Decoder::decodeFrameClassicKey(float factor, enum Interpolation method, std::string file, std::string outPath)
+{
+    AVFormatContext *classicFormatContext;
+    AVCodec *classicCodec;
+    AVStream *classicStream;
+    AVCodecContext *classicCodecContext;
+
+    initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
+    auto classicPacket = av_packet_alloc();
+    auto classicFrame = av_frame_alloc();
+
+    size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
+
+    size_t seekPosition = (position * classicStream->r_frame_rate.den * classicStream->time_base.den) /(classicStream->r_frame_rate.num * classicStream->time_base.num);
+    av_seek_frame(classicFormatContext, -1, seekPosition, AVSEEK_FLAG_ANY);
+    av_read_frame(classicFormatContext, classicPacket);
+    avcodec_send_packet(classicCodecContext, classicPacket);
+    avcodec_send_packet(classicCodecContext, nullptr);
+    avcodec_receive_frame(classicCodecContext, classicFrame);
+    saveFrame(classicFrame, outPath+"/"+std::to_string(position)+"-classicAllKey.png");
+    av_packet_free(&classicPacket);
+    av_frame_free(&classicFrame);
+}
+

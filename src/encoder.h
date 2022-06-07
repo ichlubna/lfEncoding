@@ -13,7 +13,7 @@ class Encoder
     void save(std::string path);
     static const AVPixelFormat outputPixelFormat{AV_PIX_FMT_YUV444P};
     friend void operator<<(Encoder &e, std::string file){e.encodeFrame(file);}
-    void encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path) const;
+    void encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path, bool allKey=false) const;
 
     private:
     std::vector<uint8_t> data;
@@ -41,7 +41,7 @@ class Encoder
     class FFEncoder
     {
         public:
-        FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt);
+        FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, bool allKey=false);
         ~FFEncoder();
         friend void operator<<(FFEncoder &e, AVFrame *frame){e.encodeFrame(frame);}
         friend void operator>>(FFEncoder &e, AVPacket **packetPtr){*packetPtr = e.retrievePacket();}

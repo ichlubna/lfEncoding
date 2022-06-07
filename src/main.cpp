@@ -19,7 +19,7 @@ int main(int argc, char** argv)
                                 "               Contains when decoding:\n"
                                 "               Decoded PNG frame(s)\n"
                                 "--factor       Float [0.0-1.0] indicating which view in 1D LF will be decoded\n"
-                                "--method       0 - Decodes nearest frame, 1 - Decodes two neighbors and blends them\n"
+                                //"--method [NOT FULLY IMPLEMENTED]       0 - Decodes nearest frame, 1 - Decodes two neighbors and blends them\n"
                                 };
         Arguments args(argc, argv);
         if(args.printHelpIfPresent(helpString))
