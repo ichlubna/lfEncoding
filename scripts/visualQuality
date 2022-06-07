@@ -1,0 +1,29 @@
+#/bin/bash
+INPUT_DATA="./data"
+ENCODED="./encoded"
+DECODED="./decoded"
+OUTPUT="./output"
+CODEC_BIN="../build/lfCodec"
+METRICS_SH="./metrics"
+
+rm -rf $OUTPUT"/*"
+#$CODEC_BIN --input $INPUT_DATA --output $ENCODED 
+
+TEMP=$(mktemp -d)
+INPUT_FILES=($(ls $INPUT_DATA))
+COUNT=$(ls $INPUT_DATA | wc -l)
+
+for i in $(seq 0 $COUNT); do
+    echo ${INPUT_FILES[i]}
+    FACTOR=$(bc -l <<< $i/$COUNT)
+    TIMES=$($CODEC_BIN --input $ENCODED --output $TEMP --factor $FACTOR)
+    TIME=$(echo $TIMES | grep -o -P '(?<=time:).*?(?=ms)') 
+    TIME_CLASSIC=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
+    TIME_ALLKEY=$(echo $TIMES | grep -o -P '(?<=key:).*?(?=ms)')
+    echo $TIME,$TIME_CLASSIC,$TIME_ALLKEY >> $OUTPUT"/times.csv"
+    $METRICS_SH $TEMP"/"$i".png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metrics.csv"
+    $METRICS_SH $TEMP"/"$i"-classic.png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metricsClassic.csv"
+    $METRICS_SH $TEMP"/"$i"-classicAllKey.png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metricsAllKey.csv"
+done
+
+rm -rf TEMP

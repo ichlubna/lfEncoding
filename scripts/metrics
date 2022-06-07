@@ -5,6 +5,4 @@ SSIM=$(ffmpeg -i $1 -i $2 -lavfi ssim -f null - 2>&1 | grep -o -P '(?<=All:).*(?
 PSNR=$(ffmpeg -i $1 -i $2 -lavfi psnr -f null - 2>&1 | grep -o -P '(?<=average:).*(?= min)')
 VMAF=$(ffmpeg -i $1 -i $2 -filter_complex libvmaf -f null - 2>&1 | grep -o -P '(?<=VMAF score: ).*(?=)')
 
-echo $SSIM
-echo $PSNR
-echo $VMAF
+echo $SSIM,$PSNR,$VMAF

@@ -90,10 +90,10 @@ void Encoder::save(std::string path)
     //the last offset is the index of the reference frame
     offsets.push_back(data.size()-1);
     offsets.push_back(referenceIndex);
-    gzFile f = gzopen((path+"offsets.lfo").c_str(), "wb");
+    gzFile f = gzopen((path+"/offsets.lfo").c_str(), "wb");
     gzwrite(f, reinterpret_cast<uint8_t*>(offsets.data()), offsets.size()*4);
     gzclose(f);
-    std::ofstream(path+"packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
+    std::ofstream(path+"/packets.lfp", std::ios::binary).write(reinterpret_cast<const char*>(data.data()), data.size()); 
 
     encodeReference(path);    
 }
