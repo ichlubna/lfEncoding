@@ -11,6 +11,5 @@ for i in $(seq 0 $3 $COUNT); do
     EXT=${INPUT_FILES[i]#$BASE.}
     NAME=$(printf "%04d" $NEW_I)
     NEW_I=$((NEW_I+1))
-    #cp $1/${INPUT_FILES[i]} $2/$NAME$EXT
-    echo $i ${INPUT_FILES[i]} $2/$NAME"."$EXT
+    cp $1/${INPUT_FILES[i]} $2/$NAME"."$EXT
 done
