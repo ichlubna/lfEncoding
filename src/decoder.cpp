@@ -187,13 +187,12 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation, std::s
     //TODO blending?
 }
 
-void Decoder::decodeFrameClassic(float factor, enum Interpolation method, std::string file, std::string outPath)
+void Decoder::decodeFrameClassic(float factor, [[maybe_unused]] enum Interpolation method, std::string file, std::string outPath)
 {
     //TODO interpolation method
 
     AVFormatContext *classicFormatContext;
     AVCodec *classicCodec;
-    AVStream *classicStream;
     AVCodecContext *classicCodecContext;
 
     initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
@@ -202,7 +201,7 @@ void Decoder::decodeFrameClassic(float factor, enum Interpolation method, std::s
 
     size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
     //assuming there are no keyframes except for the first one
-    size_t counter = 0; 
+    size_t counter = -1; 
     bool decoding = true;
     av_read_frame(classicFormatContext, classicPacket);
     while(decoding)
@@ -241,21 +240,26 @@ void Decoder::decodeFrameClassic(float factor, enum Interpolation method, std::s
     av_frame_free(&classicFrame);
 }
 
-void Decoder::decodeFrameClassicKey(float factor, enum Interpolation method, std::string file, std::string outPath)
+void Decoder::decodeFrameClassicKey(float factor, [[maybe_unused]] enum Interpolation method, std::string file, std::string outPath)
 {
     AVFormatContext *classicFormatContext;
     AVCodec *classicCodec;
-    AVStream *classicStream;
     AVCodecContext *classicCodecContext;
 
     initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
+    AVStream *classicStream = classicFormatContext->streams[0];
     auto classicPacket = av_packet_alloc();
     auto classicFrame = av_frame_alloc();
 
     size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
 
-    size_t seekPosition = (position * classicStream->r_frame_rate.den * classicStream->time_base.den) /(classicStream->r_frame_rate.num * classicStream->time_base.num);
-    av_seek_frame(classicFormatContext, -1, seekPosition, AVSEEK_FLAG_ANY);
+    //NOT WORKING
+    //size_t seekPosition = (position * classicStream->r_frame_rate.den * classicStream->time_base.den) /(classicStream->r_frame_rate.num * classicStream->time_base.num);
+    //av_seek_frame(classicFormatContext, 0, seekPosition, AVSEEK_FLAG_ANY);
+    //avformat_seek_file(classicFormatContext, -1, position, position, position, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);
+    for(int i=0; i<position; i++)
+        av_read_frame(classicFormatContext, classicPacket);
+
     av_read_frame(classicFormatContext, classicPacket);
     avcodec_send_packet(classicCodecContext, classicPacket);
     avcodec_send_packet(classicCodecContext, nullptr);

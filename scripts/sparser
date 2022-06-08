@@ -1,0 +1,16 @@
+#/bin/bash
+#arguments: $1 input folder, $2 output folder, $3 step
+
+INPUT_FILES=($(ls $1))
+COUNT=$(ls $1 | wc -l)
+COUNT=$((COUNT-1))
+NEW_I=0
+
+for i in $(seq 0 $3 $COUNT); do
+    BASE=${INPUT_FILES[i]%.*}
+    EXT=${INPUT_FILES[i]#$BASE.}
+    NAME=$(printf "%04d" $NEW_I)
+    NEW_I=$((NEW_I+1))
+    #cp $1/${INPUT_FILES[i]} $2/$NAME$EXT
+    echo $i ${INPUT_FILES[i]} $2/$NAME"."$EXT
+done
