@@ -13,11 +13,16 @@ METRICS_SH="./metrics"
 META_DIR="../../meta-interpolation-master"
 
 rm -rf $OUTPUT"/*"
-$CODEC_BIN --input $INPUT_DATA --output $ENCODED 
+#$CODEC_BIN --input $INPUT_DATA --output $ENCODED 
 
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
+COUNT_DEC=$((COUNT-1))
 
+rm -rf $WORKING_DIR"/*"
+rm -rf $ENCODED"/*"
+rm -rf $DECODED"/*"
+rm -rf $OUTPUT"/*"
 DECODED=$(mkdir -p $WORKING_DIR"/decoded")
 DIRS=("decoded" "decodedClassic" "decodedAllKey")
 DECODED_CLASSIC=$(mkdir -p $WORKING_DIR"/"${DIRS[1]})
@@ -26,8 +31,8 @@ DECODED_ALLKEY=$(mkdir -p $WORKING_DIR"/"${DIRS[2]})
 #Measuring decoding times and visual quality of the decoded frames
 for i in $(seq 0 $COUNT); do
     echo "Decoding: "${INPUT_FILES[i]}
-    FACTOR=$(bc -l <<< $i/$COUNT)
-    TIMES=$($CODEC_BIN --input $ENCODED --output $TEMP --factor $FACTOR)
+    FACTOR=$(bc -l <<< $i/$COUNT_DEC)
+    TIMES=$($CODEC_BIN --input $ENCODED --output $TEMP --factor $FACTOR) 
     TIME=$(echo $TIMES | grep -o -P '(?<=time:).*?(?=ms)') 
     TIME_CLASSIC=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
     TIME_ALLKEY=$(echo $TIMES | grep -o -P '(?<=key:).*?(?=ms)')
@@ -41,7 +46,6 @@ for i in $(seq 0 $COUNT); do
 done
 
 #Using LF interpolation
-$COUNT_DEC=$((COUNT-1))
 for i in $(seq 0 $COUNT_DEC); do 
     echo "Interpolating: "${INPUT_FILES[i]}
     python $INTERPOLATOR $INPUT_DATA"/"${INPUT_FILES[i]} $INPUT_DATA"/"${INPUT_FILES[$((i+1))]} $TEMP"/reference.png"
@@ -78,4 +82,4 @@ for j in $(seq 0 3); do
     rm $INTER_DIR"*"
 done
 
-#rm -rf $WORKING_DIR
+rm -rf $TEMP
