@@ -12,24 +12,24 @@ METRICS_SH="./metrics"
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
 
-rm -rf $OUTPUT"/*"
+rm -rf $WORKING_DIR
+rm -rf $ENCODED
+rm -rf $OUTPUT
+mkdir -p $WORKING_DIR
+mkdir -p $ENCODED
+mkdir -p $OUTPUT
 $CODEC_BIN --input $INPUT_DATA --output $ENCODED 
 
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
 COUNT_DEC=$((COUNT-1))
-
-rm -rf $WORKING_DIR"/*"
-rm -rf $ENCODED"/*"
-rm -rf $DECODED"/*"
-rm -rf $OUTPUT"/*"
 DECODED=$(mkdir -p $WORKING_DIR"/decoded")
 DIRS=("decoded" "decodedClassic" "decodedAllKey")
 DECODED_CLASSIC=$(mkdir -p $WORKING_DIR"/"${DIRS[1]})
 DECODED_ALLKEY=$(mkdir -p $WORKING_DIR"/"${DIRS[2]})
 
 #Measuring decoding times and visual quality of the decoded frames
-for i in $(seq 0 $COUNT); do
+for i in $(seq 0 $COUNT_DEC); do
     echo "Decoding: "${INPUT_FILES[i]}
     FACTOR=$(bc -l <<< $i/$COUNT_DEC)
     TIMES=$($CODEC_BIN --input $ENCODED --output $TEMP --factor $FACTOR) 
@@ -41,17 +41,16 @@ for i in $(seq 0 $COUNT); do
     $METRICS_SH $TEMP"/"$i"-classic.png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metricsClassic.csv"
     $METRICS_SH $TEMP"/"$i"-classicAllKey.png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metricsAllKey.csv"
     mv $TEMP"/"$i".png" $WORKING_DIR"/decoded/"${INPUT_FILES[i]} 
-    mv $TEMP"/"$i"-classic.png" $WORKING_DIR$"/"${DIRS[1]}"/"{INPUT_FILES[i]} 
+    mv $TEMP"/"$i"-classic.png" $WORKING_DIR$"/"${DIRS[1]}"/"${INPUT_FILES[i]} 
     mv $TEMP"/"$i"-classicAllKey.png" $WORKING_DIR"/"${DIRS[2]}"/"${INPUT_FILES[i]} 
 done
 
-exit(0)
-
+$COUNT_DEC_DEC=$((COUNT_DEC-1))
 #Using LF interpolation
-for i in $(seq 0 $COUNT_DEC); do 
+for i in $(seq 0 $COUNT_DEC_DEC); do 
     echo "Interpolating: "${INPUT_FILES[i]}
     python $INTERPOLATOR $INPUT_DATA"/"${INPUT_FILES[i]} $INPUT_DATA"/"${INPUT_FILES[$((i+1))]} $TEMP"/reference.png"
-    for j in $(seq 0 3); do
+    for j in $(seq 0 2); do
         DIR=$WORKING_DIR"/"${DIRS[j]}
         python $INTERPOLATOR $DIR"/"${INPUT_FILES[i]} $DIR"/"${INPUT_FILES[$((i+1))]} $TEMP"/testing.png"    
         $METRICS_SH $TEMP"/testing.png" $TEMP"/reference.png" >> $OUTPUT"/interpolationMetrics"${DIRS[j]}".csv"
@@ -62,27 +61,33 @@ done
 
 #Using SAVFI for frame interpolation
 echo "Interpolating deep"
-INTER_DIR=$(mkdir -p $META_DIR"/inputdata")
-ffmpeg -i $INPUT_DATA"/%04d.png" -vf "scale=1024x720" $INTER_DIR/%04d.png
+INTER_DIR=$META_DIR"/inputdata"
+$(mkdir -p $INTER_DIR)
+ffmpeg -i $INPUT_DATA"/%04d.png" -vf "scale=1024x720" $INTER_DIR"/%04d.png"
 pushd && cd ../../meta-interpolation-master/scripts/ && ./run_test.sh && popd
 REF=$(mkdir -p $TEMP"/reference")
 REF_FILES=($(ls $INTER_DIR))
 REF_COUNT=$(ls $INTER_DIR | wc -l)
-for i in $(seq 0 $REF_COUNT); do
+REF_COUNT_DEC=$((REF_COUNT-1))
+for i in $(seq 0 $REF_COUNT_DEC); do
     if [[ "${REF_FILES[i]}" == *"0.500"* ]]; then
         cp $INTER_DIR"/"${REF_FILES[i]} $REF"/"
     fi
 done
 REF_FILES=($(ls $REF))
 REF_COUNT=$(ls $REF | wc -l)
+REF_COUNT_DEC=$((REF_COUNT-1))
 rm $INTER_DIR"*"
-for j in $(seq 0 3); do
-    ffmpeg -i $WORKING_DIR"/"${DIRS[i]}"/%04d.png" -vf "scale=1024x720" $INTER_DIR/%04d.png
-    pushd && cd ../../meta-interpolation-master/scripts/ && ./run_test.sh && popd
-    for i in $(seq 0 $REF_COUNT); do
+for j in $(seq 0 2); do
+    ffmpeg -i $WORKING_DIR"/"${DIRS[j]}"/%04d.png" -vf "scale=1024x720" $INTER_DIR"/%04d.png"
+    CURRENT_DIR=$(pwd)
+    cd $META_DIR
+    ./scripts/run_test.sh
+    cd $CURRENT_DIR
+    for i in $(seq 0 $REF_COUNT_DEC); do
         $METRICS_SH $INTER_DIR"/"${REF_FILES[i]} $REF"/"${REF_FILES[i]} >> $OUTPUT"/"${DIRS[j]}".csv"
     done
-    rm $INTER_DIR"*"
 done
+rm -rf $INTER_DIR
 
 rm -rf $TEMP
