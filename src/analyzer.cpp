@@ -4,7 +4,7 @@
 #include "decoder.h"
 #include "loadingBar/loadingbar.hpp"
 
-void Analyzer::encode(std::string input, std::string output)
+void Analyzer::encode(std::string input, std::string output, size_t crf)
 { 
     auto dir = std::filesystem::directory_iterator(input); 
     std::set<std::filesystem::path> sorted;
@@ -21,7 +21,7 @@ void Analyzer::encode(std::string input, std::string output)
 
     auto encodeStart = std::chrono::steady_clock::now();
 
-    Encoder encoder(referenceID, referenceFrame);
+    Encoder encoder(referenceID, referenceFrame, crf);
 
     bar.add();
 
@@ -94,10 +94,10 @@ void Analyzer::decode(std::string input, float factor, int method, std::string o
     std::cout << "Decoding time classic all-key: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
 }
 
-Analyzer::Analyzer(std::string input, std::string output, float factor, int method)
+Analyzer::Analyzer(std::string input, std::string output, size_t crf, float factor, int method)
 {
     if(factor<0)
-        encode(input, output);
+        encode(input, output, crf);
     else
         decode(input, factor, method, output);
 }

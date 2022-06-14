@@ -18,7 +18,7 @@ void Encoder::addData(const std::vector<uint8_t> *packetData)
     data.insert(data.end(), packetData->begin()+HEADER_SIZE, packetData->end());
 }
 
-Encoder::Encoder(uint32_t refID, std::string refFile) : referenceIndex{refID}, referenceFile{refFile} 
+Encoder::Encoder(uint32_t refID, std::string refFile, size_t inCrf) : referenceIndex{refID}, referenceFile{refFile}, crf{inCrf} 
 {
 }
 
@@ -61,7 +61,7 @@ void Encoder::encodeReference(std::string path)
 {
     PairEncoder::Frame frame(referenceFile);
     auto rawFrame = frame.getFrame();
-    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat);
+    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat, crf);
     auto converted = Utils::ConvertedFrame(rawFrame, outputPixelFormat);
 
     encoder << converted.getFrame();
@@ -80,7 +80,7 @@ void Encoder::encodeReference(std::string path)
 
 void Encoder::encodeFrame(std::string file)
 {
-    PairEncoder newFrame(referenceFile, file);
+    PairEncoder newFrame(referenceFile, file, crf);
     addData(newFrame.getFramePacket());
 }
 
@@ -131,14 +131,14 @@ Encoder::FFMuxer::~FFMuxer()
     avformat_free_context(muxerFormatContext); 
 }
 
-Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, bool allKey)
+Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, size_t crf, bool allKey)
 {
     std::string codecName = "libx265";
     std::string codecParamsName = "x265-params";
     std::string keyInterval = "1000";
     if(allKey)
         keyInterval = "1";
-    std::string codecParams = "log-level=error:keyint="+keyInterval+":min-keyint="+keyInterval+":scenecut=0:crf=20";
+    std::string codecParams = "log-level=error:keyint="+keyInterval+":min-keyint="+keyInterval+":scenecut=0:crf="+std::to_string(crf);
     codec = avcodec_find_encoder_by_name(codecName.c_str());
     codecContext = avcodec_alloc_context3(codec);
     if(!codecContext)
@@ -234,7 +234,7 @@ void Encoder::PairEncoder::encode()
     Frame frame(frameFile); 
     auto referenceFrame = reference.getFrame();
 
-    FFEncoder encoder(referenceFrame->width, referenceFrame->height, outputPixelFormat); 
+    FFEncoder encoder(referenceFrame->width, referenceFrame->height, outputPixelFormat, crf); 
 
     auto convertedReference = Utils::ConvertedFrame(reference.getFrame(), outputPixelFormat);
     auto convertedFrame = Utils::ConvertedFrame(frame.getFrame(), outputPixelFormat);

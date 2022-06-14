@@ -12,13 +12,15 @@ METRICS_SH="./metrics"
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
 
+CRF=25
+
 rm -rf $WORKING_DIR
 rm -rf $ENCODED
 rm -rf $OUTPUT
 mkdir -p $WORKING_DIR
 mkdir -p $ENCODED
 mkdir -p $OUTPUT
-$CODEC_BIN --input $INPUT_DATA --output $ENCODED 
+$CODEC_BIN --input $INPUT_DATA --output $ENCODED --crf $CRF
 
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
@@ -45,7 +47,8 @@ for i in $(seq 0 $COUNT_DEC); do
     mv $TEMP"/"$i"-classicAllKey.png" $WORKING_DIR"/"${DIRS[2]}"/"${INPUT_FILES[i]} 
 done
 
-$COUNT_DEC_DEC=$((COUNT_DEC-1))
+if false; then
+COUNT_DEC_DEC=$((COUNT_DEC-1))
 #Using LF interpolation
 for i in $(seq 0 $COUNT_DEC_DEC); do 
     echo "Interpolating: "${INPUT_FILES[i]}
@@ -58,34 +61,39 @@ for i in $(seq 0 $COUNT_DEC_DEC); do
     done
     rm $TEMP"/reference.png" 
 done
-
+fi
+set -x
 #Using SAVFI for frame interpolation
 echo "Interpolating deep"
 INTER_DIR=$META_DIR"/inputdata"
+rm -rf $INTER_DIR
 $(mkdir -p $INTER_DIR)
 ffmpeg -i $INPUT_DATA"/%04d.png" -vf "scale=1024x720" $INTER_DIR"/%04d.png"
-pushd && cd ../../meta-interpolation-master/scripts/ && ./run_test.sh && popd
-REF=$(mkdir -p $TEMP"/reference")
+CURRENT_DIR=$(pwd)
+cd $META_DIR
+./scripts/run_test.sh
+cd $CURRENT_DIR
+REF=$(mkdir -p $WORKING_DIR"/reference")
 REF_FILES=($(ls $INTER_DIR))
 REF_COUNT=$(ls $INTER_DIR | wc -l)
 REF_COUNT_DEC=$((REF_COUNT-1))
 for i in $(seq 0 $REF_COUNT_DEC); do
-    if [[ "${REF_FILES[i]}" == *"0.500"* ]]; then
+    if [[ ${REF_FILES[i]} == *"0.500"* ]]; then
         cp $INTER_DIR"/"${REF_FILES[i]} $REF"/"
     fi
 done
 REF_FILES=($(ls $REF))
 REF_COUNT=$(ls $REF | wc -l)
 REF_COUNT_DEC=$((REF_COUNT-1))
-rm $INTER_DIR"*"
 for j in $(seq 0 2); do
+    rm -rf $INTER_DIR
+    $(mkdir -p $INTER_DIR)
     ffmpeg -i $WORKING_DIR"/"${DIRS[j]}"/%04d.png" -vf "scale=1024x720" $INTER_DIR"/%04d.png"
-    CURRENT_DIR=$(pwd)
     cd $META_DIR
     ./scripts/run_test.sh
     cd $CURRENT_DIR
     for i in $(seq 0 $REF_COUNT_DEC); do
-        $METRICS_SH $INTER_DIR"/"${REF_FILES[i]} $REF"/"${REF_FILES[i]} >> $OUTPUT"/"${DIRS[j]}".csv"
+        $METRICS_SH $INTER_DIR"/"${REF_FILES[i]} $REF"/"${REF_FILES[i]} >> $OUTPUT"/deep"${DIRS[j]}".csv"
     done
 done
 rm -rf $INTER_DIR

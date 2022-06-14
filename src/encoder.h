@@ -9,7 +9,7 @@ extern "C" {
 class Encoder
 {
     public:
-    Encoder(uint32_t refID, std::string refFile);
+    Encoder(uint32_t refID, std::string refFile, size_t inCrf);
     void save(std::string path);
     static const AVPixelFormat outputPixelFormat{AV_PIX_FMT_YUV444P};
     friend void operator<<(Encoder &e, std::string file){e.encodeFrame(file);}
@@ -23,6 +23,7 @@ class Encoder
     void encodeFrame(std::string file);
     void addData(const std::vector<uint8_t> *packetData);
     void encodeReference(std::string path);
+    size_t crf{20};
 
     class FFMuxer
     {
@@ -41,7 +42,7 @@ class Encoder
     class FFEncoder
     {
         public:
-        FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, bool allKey=false);
+        FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, size_t crf, bool allKey=false);
         ~FFEncoder();
         friend void operator<<(FFEncoder &e, AVFrame *frame){e.encodeFrame(frame);}
         friend void operator>>(FFEncoder &e, AVPacket **packetPtr){*packetPtr = e.retrievePacket();}
@@ -76,7 +77,7 @@ class Encoder
             AVPacket *packet;
         };
 
-        PairEncoder(std::string ref, std::string frame) : referenceFile(ref), frameFile(frame) {encode();};
+        PairEncoder(std::string ref, std::string frame, size_t inCrf) : referenceFile(ref), frameFile(frame), crf{inCrf} {encode();};
         const std::vector<uint8_t>* getFramePacket() const {return &framePacket;};
         const std::vector<uint8_t>* getReferencePacket() const {return &referencePacket;};
 
@@ -86,5 +87,6 @@ class Encoder
         std::string frameFile; 
         std::vector<uint8_t> framePacket;
         std::vector<uint8_t> referencePacket;
+        size_t crf;
     };
 };
