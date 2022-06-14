@@ -26,12 +26,6 @@ void Decoder::openFile(std::string path)
             break;
         offsets.insert(offsets.end(), intBuffer, intBuffer+size/4);
     }
-   /* 
-    size_t offsetsBufferSize{1000};
-    offsets.resize(offsetsBufferSize);
-    while(true)
-        if(gzread(offsetsFile, offsets.data(), offsetsBufferSize*8) == 0)
-            return;*/
     packetsFile.open(path+"/packets.lfp", std::ifstream::in | std::ifstream::binary); 
 }
 
@@ -214,9 +208,11 @@ void Decoder::decodeFrameClassic(float factor, [[maybe_unused]] enum Interpolati
             av_packet_unref(classicPacket);
             err = av_read_frame(classicFormatContext, classicPacket);
             if(err == AVERROR_EOF)
-                classicPacket=nullptr;
+            {
+                classicPacket->data=nullptr;
+                classicPacket->size = 0;
+            }
         }
-
         bool waitForFrame = true;
         while(waitForFrame)
         {
@@ -262,7 +258,9 @@ void Decoder::decodeFrameClassicKey(float factor, [[maybe_unused]] enum Interpol
 
     av_read_frame(classicFormatContext, classicPacket);
     avcodec_send_packet(classicCodecContext, classicPacket);
-    avcodec_send_packet(classicCodecContext, nullptr);
+    classicPacket->data=nullptr;
+    classicPacket->size = 0;
+    avcodec_send_packet(classicCodecContext, classicPacket);
     avcodec_receive_frame(classicCodecContext, classicFrame);
     saveFrame(classicFrame, outPath+"/"+std::to_string(position)+"-classicAllKey.png");
     av_packet_free(&classicPacket);

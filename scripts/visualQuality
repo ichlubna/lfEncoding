@@ -13,7 +13,7 @@ METRICS_SH="./metrics"
 META_DIR="../../meta-interpolation-master"
 
 rm -rf $OUTPUT"/*"
-#$CODEC_BIN --input $INPUT_DATA --output $ENCODED 
+$CODEC_BIN --input $INPUT_DATA --output $ENCODED 
 
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
@@ -45,13 +45,15 @@ for i in $(seq 0 $COUNT); do
     mv $TEMP"/"$i"-classicAllKey.png" $WORKING_DIR"/"${DIRS[2]}"/"${INPUT_FILES[i]} 
 done
 
+exit(0)
+
 #Using LF interpolation
 for i in $(seq 0 $COUNT_DEC); do 
     echo "Interpolating: "${INPUT_FILES[i]}
     python $INTERPOLATOR $INPUT_DATA"/"${INPUT_FILES[i]} $INPUT_DATA"/"${INPUT_FILES[$((i+1))]} $TEMP"/reference.png"
     for j in $(seq 0 3); do
         DIR=$WORKING_DIR"/"${DIRS[j]}
-        python $INTERPOLATOR $DIRS"/"${INPUT_FILES[i]} $DIRS"/"${INPUT_FILES[$((i+1))]} $TEMP"/testing.png"    
+        python $INTERPOLATOR $DIR"/"${INPUT_FILES[i]} $DIR"/"${INPUT_FILES[$((i+1))]} $TEMP"/testing.png"    
         $METRICS_SH $TEMP"/testing.png" $TEMP"/reference.png" >> $OUTPUT"/interpolationMetrics"${DIRS[j]}".csv"
         rm $TEMP"/testing.png"
     done
@@ -59,6 +61,7 @@ for i in $(seq 0 $COUNT_DEC); do
 done
 
 #Using SAVFI for frame interpolation
+echo "Interpolating deep"
 INTER_DIR=$(mkdir -p $META_DIR"/inputdata")
 ffmpeg -i $INPUT_DATA"/%04d.png" -vf "scale=1024x720" $INTER_DIR/%04d.png
 pushd && cd ../../meta-interpolation-master/scripts/ && ./run_test.sh && popd
@@ -74,7 +77,7 @@ REF_FILES=($(ls $REF))
 REF_COUNT=$(ls $REF | wc -l)
 rm $INTER_DIR"*"
 for j in $(seq 0 3); do
-    ffmpeg -i $WORKING_DIR"/"{DIRS[i]}"/%04d.png" -vf "scale=1024x720" $INTER_DIR/%04d.png
+    ffmpeg -i $WORKING_DIR"/"${DIRS[i]}"/%04d.png" -vf "scale=1024x720" $INTER_DIR/%04d.png
     pushd && cd ../../meta-interpolation-master/scripts/ && ./run_test.sh && popd
     for i in $(seq 0 $REF_COUNT); do
         $METRICS_SH $INTER_DIR"/"${REF_FILES[i]} $REF"/"${REF_FILES[i]} >> $OUTPUT"/"${DIRS[j]}".csv"
