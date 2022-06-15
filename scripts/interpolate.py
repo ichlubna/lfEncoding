@@ -13,7 +13,7 @@ height = numpy.int32(height)
 result = numpy.zeros((height,width,depth), numpy.float32)
 
 imgAGPU = cuda.mem_alloc(imgA.size * depth * 4)
-imgBGPU = cuda.mem_alloc(imgA.size * depth * 4)a
+imgBGPU = cuda.mem_alloc(imgA.size * depth * 4)
 resultGPU = cuda.mem_alloc(result.size * depth * 4)
 cuda.memcpy_htod(imgAGPU, imgA)
 cuda.memcpy_htod(imgBGPU, imgB)
@@ -102,7 +102,7 @@ kernel = SourceModule("""
             return;
 
         int id = 3*(width*y + x);
-        int maxFocus = width/20;
+        int maxFocus = width/100;
         float step = 0.1;
 
         float minDistance = 9999.0;
@@ -114,7 +114,11 @@ kernel = SourceModule("""
             if(d < minDistance)
             {
                 minDistance = d;
-                storePixel(result, mix(bA.data[1][1], bB.data[1][1], 0.5), id);
+                //image
+                //storePixel(result, mix(bA.data[1][1], bB.data[1][1], 0.5), id);
+                //focusMap
+                float focus = round(i/maxFocus*255);
+                storePixel(result, Pixel{focus, focus, focus}, id);
            }
         }
     }
@@ -126,4 +130,6 @@ func(width, height, imgAGPU, imgBGPU, resultGPU, \
 
 cuda.memcpy_dtoh(result, resultGPU)
 result = result.astype(numpy.uint8)
-cv2.imwrite(sys.argv[3], result)
+#cv2.imwrite(sys.argv[3], result)
+medianFocusMap = cv2.medianBlur(result,9)
+cv2.imwrite(sys.argv[3], medianFocusMap)

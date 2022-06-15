@@ -12,15 +12,15 @@ METRICS_SH="./metrics"
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
 
-CRF=25
+CRF=20
 
 rm -rf $WORKING_DIR
-rm -rf $ENCODED
+#rm -rf $ENCODED
 rm -rf $OUTPUT
 mkdir -p $WORKING_DIR
 mkdir -p $ENCODED
 mkdir -p $OUTPUT
-$CODEC_BIN --input $INPUT_DATA --output $ENCODED --crf $CRF
+#$CODEC_BIN --input $INPUT_DATA --output $ENCODED --crf $CRF
 
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
@@ -47,7 +47,6 @@ for i in $(seq 0 $COUNT_DEC); do
     mv $TEMP"/"$i"-classicAllKey.png" $WORKING_DIR"/"${DIRS[2]}"/"${INPUT_FILES[i]} 
 done
 
-if false; then
 COUNT_DEC_DEC=$((COUNT_DEC-1))
 #Using LF interpolation
 for i in $(seq 0 $COUNT_DEC_DEC); do 
@@ -61,8 +60,7 @@ for i in $(seq 0 $COUNT_DEC_DEC); do
     done
     rm $TEMP"/reference.png" 
 done
-fi
-set -x
+
 #Using SAVFI for frame interpolation
 echo "Interpolating deep"
 INTER_DIR=$META_DIR"/inputdata"
@@ -73,7 +71,8 @@ CURRENT_DIR=$(pwd)
 cd $META_DIR
 ./scripts/run_test.sh
 cd $CURRENT_DIR
-REF=$(mkdir -p $WORKING_DIR"/reference")
+REF=$WORKING_DIR"/reference"
+$(mkdir -p $REF)
 REF_FILES=($(ls $INTER_DIR))
 REF_COUNT=$(ls $INTER_DIR | wc -l)
 REF_COUNT_DEC=$((REF_COUNT-1))

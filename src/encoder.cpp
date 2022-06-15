@@ -26,7 +26,7 @@ void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::s
 {
     PairEncoder::Frame check(*sortedFiles->begin());
     auto rawFrame = check.getFrame();
-    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat, allKey);
+    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat, crf, allKey);
     FFMuxer muxer(path, encoder.getCodecContext());
     AVPacket *packet;
     size_t sent{0};
