@@ -55,12 +55,12 @@ void Analyzer::encode(std::string input, std::string output, size_t crf)
     size_t classicSize = std::filesystem::file_size(output+"/classic.ts"); 
     size_t classicKeySize = std::filesystem::file_size(output+"/classicKey.ts"); 
     size_t totalSize = referenceSize+offsetsSize+packetsSize; 
-    std::cout << "Encoded size: total - " << totalSize << std::endl;
+    std::cout << "Encoded size: total - " << totalSize << " bytes" << std::endl;
     std::cout << "  reference - " << (static_cast<float>(referenceSize)/totalSize)*100 << "%" << std::endl;
     std::cout << "  offsets - " << (static_cast<float>(offsetsSize)/totalSize)*100 << "%" << std::endl;
     std::cout << "  packets - " << (static_cast<float>(packetsSize)/totalSize)*100 << "%" << std::endl;
-    std::cout << "Encoded classic size: total - " << classicSize << std::endl;
-    std::cout << "Encoded classic all-key size: total - " << classicKeySize << std::endl;
+    std::cout << "Encoded classic size: total - " << classicSize << " bytes" << std::endl;
+    std::cout << "Encoded classic all-key size: total - " << classicKeySize << " bytes" << std::endl;
 }
 
 void Analyzer::decode(std::string input, float factor, int method, std::string outPath)

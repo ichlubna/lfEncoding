@@ -2,9 +2,6 @@
 #expecting input data as numbered LF images like 0000.png, 0001.png...with camera moving from left to right
 INPUT_DATA="./data"
 WORKING_DIR="./working"
-TEMP=$(mktemp -d)
-ENCODED="./encoded"
-OUTPUT="./output"
 CODEC_BIN="../build/lfCodec"
 INTERPOLATOR="./interpolate.py"
 METRICS_SH="./metrics"
@@ -12,15 +9,22 @@ METRICS_SH="./metrics"
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
 
-CRF=20
+#for CRF in $(seq 5 5 50); do
+for CRF in $(seq 20 5 25); do
+echo "Processing CRF "$CRF
 
-rm -rf $WORKING_DIR
-#rm -rf $ENCODED
+TEMP=$(mktemp -d)
+WORKING_DIR=$WORKING_DIR""$CRF
+ENCODED="./encoded"$CRF
+OUTPUT="./output"$CRF
+
+rm -rf $ENCODED
 rm -rf $OUTPUT
+rm -rf $WORKING_DIR
 mkdir -p $WORKING_DIR
 mkdir -p $ENCODED
 mkdir -p $OUTPUT
-#$CODEC_BIN --input $INPUT_DATA --output $ENCODED --crf $CRF
+$CODEC_BIN --input $INPUT_DATA --output $ENCODED --crf $CRF
 
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
@@ -98,3 +102,4 @@ done
 rm -rf $INTER_DIR
 
 rm -rf $TEMP
+done
