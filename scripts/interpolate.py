@@ -116,10 +116,10 @@ kernel = SourceModule("""
             {
                 minDistance = d;
                 //image
-                //storePixel(result, mix(bA.data[1][1], bB.data[1][1], 0.5), id);
+                storePixel(result, mix(bA.data[1][1], bB.data[1][1], 0.5), id);
                 //focusMap
-                float focus = round((i/maxFocus)*255);
-                storePixel(result, Pixel{focus, focus, focus}, id);
+                //float focus = round((i/maxFocus)*255);
+                //storePixel(result, Pixel{focus, focus, focus}, id);
            }
         }
     }
@@ -133,6 +133,6 @@ func(width, height, imgAGPU, imgBGPU, resultGPU, displacement, \
      grid=(int(width/16), int(height/16)), shared=0)
 cuda.memcpy_dtoh(result, resultGPU)
 result = result.astype(numpy.uint8)
-#cv2.imwrite(sys.argv[3], result)
-medianFocusMap = cv2.medianBlur(result,9)
-cv2.imwrite(sys.argv[3], medianFocusMap)
+cv2.imwrite(sys.argv[3], result)
+#medianFocusMap = cv2.medianBlur(result,9)
+#cv2.imwrite(sys.argv[3], medianFocusMap)

@@ -2,7 +2,10 @@
 #expecting input data as numbered LF images like 0000.png, 0001.png...with camera moving from left to right
 INPUT_DATA="/home/ichlubna/Downloads/frames/pavilion/ten/"
 #interpolation parameter - how far are views
-#recommended values: pavilion 0.0006, sand 0.002, cars 0.0007, bunny 0.0027 
+#recommended values:
+#full: pavilion 0.0006, sand 0.002, cars 0.007, bunny 0.0027 
+#fifth: pavilion 0.004, sand 0.011, cars 0.04, bunny 0.01 
+#tenth: pavilion 0.009, sand 0.02, cars 0.07, bunny 0.02 
 INTERPOLATION_DISPLACEMENT=0.0006
 CODEC_BIN="../build/lfCodec"
 INTERPOLATOR="./interpolate.py"
@@ -12,7 +15,7 @@ METRICS_SH="./metrics"
 META_DIR="../../meta-interpolation-master"
 
 #for CRF in $(seq 5 7 50); do
-for CRF in $(seq 5 20 50); do
+for CRF in $(seq 24 1 24); do
 echo "Processing CRF "$CRF
 
 TEMP=$(mktemp -d)

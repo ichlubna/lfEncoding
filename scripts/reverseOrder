@@ -1,0 +1,11 @@
+#/bin/bash
+#$1 - input folder, $2 output folder
+
+INPUT_FILES=($(ls $1))
+COUNT=$(ls $1 | wc -l)
+COUNT_DEC=$((COUNT-1))
+for i in $(seq 0 $COUNT_DEC); do
+    ii=$((COUNT_DEC-i))
+    echo "Copying: "$1"/"${INPUT_FILES[i]}" to "$2"/"${INPUT_FILES[ii]}
+    cp $1/${INPUT_FILES[i]} $2/${INPUT_FILES[ii]}
+done
