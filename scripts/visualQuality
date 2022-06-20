@@ -1,7 +1,9 @@
-#/bin/bash\
+#/bin/bash
 #expecting input data as numbered LF images like 0000.png, 0001.png...with camera moving from left to right
-INPUT_DATA="./data"
-WORKING_DIR="./working"
+INPUT_DATA="/home/ichlubna/Downloads/frames/pavilion/ten/"
+#interpolation parameter - how far are views
+#recommended values: pavilion 0.0006, sand 0.002, cars 0.0007, bunny 0.0027 
+INTERPOLATION_DISPLACEMENT=0.0006
 CODEC_BIN="../build/lfCodec"
 INTERPOLATOR="./interpolate.py"
 METRICS_SH="./metrics"
@@ -9,12 +11,12 @@ METRICS_SH="./metrics"
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
 
-#for CRF in $(seq 5 5 50); do
-for CRF in $(seq 20 5 25); do
+#for CRF in $(seq 5 7 50); do
+for CRF in $(seq 5 20 50); do
 echo "Processing CRF "$CRF
 
 TEMP=$(mktemp -d)
-WORKING_DIR=$WORKING_DIR""$CRF
+WORKING_DIR="./working"$CRF
 ENCODED="./encoded"$CRF
 OUTPUT="./output"$CRF
 
@@ -55,7 +57,7 @@ COUNT_DEC_DEC=$((COUNT_DEC-1))
 #Using LF interpolation
 for i in $(seq 0 $COUNT_DEC_DEC); do 
     echo "Interpolating: "${INPUT_FILES[i]}
-    python $INTERPOLATOR $INPUT_DATA"/"${INPUT_FILES[i]} $INPUT_DATA"/"${INPUT_FILES[$((i+1))]} $TEMP"/reference.png"
+    python $INTERPOLATOR $INPUT_DATA"/"${INPUT_FILES[i]} $INPUT_DATA"/"${INPUT_FILES[$((i+1))]} $TEMP"/reference.png" $INTERPOLATION_DISPLACEMENT
     for j in $(seq 0 2); do
         DIR=$WORKING_DIR"/"${DIRS[j]}
         python $INTERPOLATOR $DIR"/"${INPUT_FILES[i]} $DIR"/"${INPUT_FILES[$((i+1))]} $TEMP"/testing.png"    

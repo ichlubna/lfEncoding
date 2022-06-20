@@ -93,7 +93,7 @@ kernel = SourceModule("""
 
     __global__ void process
       ( int width, int height,
-        float *imgA, float *imgB, float *result )
+        float *imgA, float *imgB, float *result, float displacement )
         {
         int x = threadIdx.x + blockIdx.x * blockDim.x;
         int y = threadIdx.y + blockIdx.y * blockDim.y;
@@ -102,8 +102,9 @@ kernel = SourceModule("""
             return;
 
         int id = 3*(width*y + x);
-        int maxFocus = width/100;
-        float step = 0.1;
+        float maxFocus = width*displacement;
+        float step = maxFocus/512;
+
 
         float minDistance = 9999.0;
         for(float i=0; i<maxFocus; i+=step)
@@ -117,17 +118,19 @@ kernel = SourceModule("""
                 //image
                 //storePixel(result, mix(bA.data[1][1], bB.data[1][1], 0.5), id);
                 //focusMap
-                float focus = round(i/maxFocus*255);
+                float focus = round((i/maxFocus)*255);
                 storePixel(result, Pixel{focus, focus, focus}, id);
            }
         }
     }
     """)
 func = kernel.get_function("process")
-func(width, height, imgAGPU, imgBGPU, resultGPU, \
+displacement = numpy.single(0.01)
+if len(sys.argv) > 4:
+   displacement = numpy.single(sys.argv[4])
+func(width, height, imgAGPU, imgBGPU, resultGPU, displacement, \
      block=(16, 16, 1), \
      grid=(int(width/16), int(height/16)), shared=0)
-
 cuda.memcpy_dtoh(result, resultGPU)
 result = result.astype(numpy.uint8)
 #cv2.imwrite(sys.argv[3], result)
