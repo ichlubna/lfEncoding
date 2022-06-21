@@ -6,16 +6,20 @@ INPUT_DATA="/home/ichlubna/Downloads/frames/pavilion/ten/"
 #full: pavilion 0.0006, sand 0.002, cars 0.007, bunny 0.0027 
 #fifth: pavilion 0.004, sand 0.011, cars 0.04, bunny 0.01 
 #tenth: pavilion 0.009, sand 0.02, cars 0.07, bunny 0.02 
-INTERPOLATION_DISPLACEMENT=0.0006
+INTERPOLATION_DISPLACEMENT=0.009
+#the focusing distance
+#recommended values>
+#pavilion 900, sand 00, cars 5000, bunny 3350 
+BLENDING_FOCUS=900
 CODEC_BIN="../build/lfCodec"
 INTERPOLATOR="./interpolate.py"
+LF_BLENDING="./lfBlending.py"
 METRICS_SH="./metrics"
 #https://github.com/myungsub/meta-interpolation
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
 
-#for CRF in $(seq 5 7 50); do
-for CRF in $(seq 24 1 24); do
+for CRF in $(seq 5 7 50); do
 echo "Processing CRF "$CRF
 
 TEMP=$(mktemp -d)
@@ -105,6 +109,38 @@ for j in $(seq 0 2); do
     done
 done
 rm -rf $INTER_DIR
+
+#lightfield blending
+BLENDED_FILE=$TEMP/"blend.png"
+BLENDED_REF_FILE=$TEMP/"blendRef.png"
+python $LF_BLENDING $INPUT_DATA $BLENDING_FOCUS $((COUNT_DEC/2)) $BLENDED_REF_FILE
+MISC_LOG=$OUTPUT"/misc.csv"
+echo "Blended" >> $MISC_LOG
+for j in $(seq 0 2); do
+    DIR=$WORKING_DIR"/"${DIRS[j]}
+    python $LF_BLENDING $DIR $BLENDING_FOCUS $((COUNT_DEC/2)) $BLENDED_FILE 
+    $METRICS_SH $BLENDED_FILE $BLENDED_REF_FILE >> $MISC_LOG
+done
+
+#size info
+echo "Sizes" >> $MISC_LOG
+echo "Offsets" >> $MISC_LOG
+stat --printf="%s" $ENCODED"/offsets.lfo" >> $MISC_LOG
+echo "" >> $MISC_LOG
+echo "Packets" >> $MISC_LOG
+stat --printf="%s" $ENCODED"/packets.lfp" >> $MISC_LOG
+echo "" >> $MISC_LOG
+echo "Reference" >> $MISC_LOG
+stat --printf="%s" $ENCODED"/reference.ts" >> $MISC_LOG
+echo "" >> $MISC_LOG
+echo "Classic" >> $MISC_LOG
+stat --printf="%s" $ENCODED"/classic.ts" >> $MISC_LOG
+echo "" >> $MISC_LOG
+echo "AllKey" >> $MISC_LOG
+stat --printf="%s" $ENCODED"/classicKey.ts" >> $MISC_LOG
+echo "" >> $MISC_LOG
+echo "Frame count" >> $MISC_LOG
+echo $COUNT >> $MISC_LOG
 
 rm -rf $TEMP
 done
