@@ -1,16 +1,16 @@
 #/bin/bash
 #expecting input data as numbered LF images like 0000.png, 0001.png...with camera moving from left to right
-INPUT_DATA="/home/ichlubna/Downloads/frames/pavilion/ten/"
+INPUT_DATA="/home/ichlubna/Downloads/frames/class/ten/"
 #interpolation parameter - how far are views
 #recommended values:
-#full: pavilion 0.0006, sand 0.002, cars 0.007, bunny 0.0027 
-#fifth: pavilion 0.004, sand 0.011, cars 0.04, bunny 0.01 
-#tenth: pavilion 0.009, sand 0.02, cars 0.07, bunny 0.02 
-INTERPOLATION_DISPLACEMENT=0.009
+#full: pavilion 0.0006, sand 0.002, cars 0.007, bunny 0.0027, class 0.005 
+#fifth: pavilion 0.004, sand 0.011, cars 0.04, bunny 0.01, class 0.065 
+#tenth: pavilion 0.009, sand 0.02, cars 0.07, bunny 0.02, class 0.082 
+INTERPOLATION_DISPLACEMENT=0.02
 #the focusing distance
 #recommended values>
-#pavilion 900, sand 00, cars 5000, bunny 3350 
-BLENDING_FOCUS=900
+#pavilion 900, sand 00, cars 15000, bunny 3350, class 3900 
+BLENDING_FOCUS=15000
 CODEC_BIN="../build/lfCodec"
 INTERPOLATOR="./interpolate.py"
 LF_BLENDING="./lfBlending.py"
