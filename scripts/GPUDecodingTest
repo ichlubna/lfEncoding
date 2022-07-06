@@ -1,0 +1,67 @@
+#/bin/bash
+INPUT_DIR=$1
+#0-1
+COMPRESSION=$2
+#https://ffmpeg.org
+FFMPEG_PATH=ffmpeg
+#https://developer.nvidia.com/nvjpeg
+NVJPEG_DECODER_PATH=./nvjpeg2000_decode_sample
+#https://github.com/ARM-software/astc-encoder
+ASTC_TOOL=astcenc/astcenc-avx2
+TIME_TOOL=/usr/bin/time
+METRICS_PATH=./metrics
+
+CRF=$(bc -l <<< $COMPRESSION*51)
+CRF=${CRF%.*}
+COMP_LVL=$(bc -l <<< $COMPRESSION*100)
+COMP_LVL=${COMP_LVL%.*}
+
+WORKING_DIR="./working"
+mkdir -p $WORKING_DIR
+JP_DIR=$WORKING_DIR"/jp"
+mkdir -p $JP_DIR
+
+OUTPUT_DIR="./output"
+mkdir -p $OUTPUT_DIR
+
+echo "Original size:"
+du -hsb $INPUT_DIR
+
+echo "_______________________"
+echo "Video stats"
+$FFMPEG_PATH -i $INPUT_DIR"/%04d.png" -c:v libx265 -crf $CRF -pix_fmt yuv420p $WORKING_DIR"/video.mkv" -hide_banner -loglevel error
+VIDEO_DEC_DIR=$WORKING_DIR"/videoDec"
+mkdir -p $VIDEO_DEC_DIR
+echo "Decoding with storing: "
+$TIME_TOOL -f "%e" $FFMPEG_PATH -vsync 0 -hwaccel cuda -i $WORKING_DIR"/video.mkv" $VIDEO_DEC_DIR"/%04d.bmp" -hide_banner -loglevel error 
+echo "Decoding without storing: "
+$TIME_TOOL -f "%e" $FFMPEG_PATH -stream_loop 50 -vsync 0 -hwaccel cuda -i $WORKING_DIR"/video.mkv" -f null - -hide_banner -loglevel error
+echo $T
+$METRICS_PATH $VIDEO_DEC_DIR"/%04d.bmp" $INPUT_DIR"/%04d.png" 
+echo "Size:"
+du -hsb $WORKING_DIR"/video.mkv"
+
+
+echo "_______________________"
+echo "JPG stats"
+$FFMPEG_PATH -i $INPUT_DIR"/%04d.png" -c:v libopenjpeg -compression_level $COMP_LVL $JP_DIR"/%04d.jp2" -hide_banner -loglevel error 
+JP_DEC_DIR=$WORKING_DIR"/jpDec"
+mkdir -p $JP_DEC_DIR
+echo "Decoding with storing: "
+$TIME_TOOL -f "%e" $NVJPEG_DECODER_PATH -i $JP_DIR -o $JP_DEC_DIR
+echo "Decoding without storing: "
+$TIME_TOOL -f "%e" $NVJPEG_DECODER_PATH -i $JP_DIR -t 2500
+$METRICS_PATH $JP_DEC_DIR"/%04d.bmp" $INPUT_DIR"/%04d.png"
+echo "Size:"
+du -hsb $JP_DIR
+
+
+echo "_______________________"
+echo "ASTC stats"
+BLOCK="8x8"
+$ASTC_TOOL -cl $INPUT_DIR"/0000.png" $WORKING_DIR"/test.astc" $BLOCK -exhaustive
+$ASTC_TOOL -dl $WORKING_DIR"/test.astc" $WORKING_DIR"/test.bmp" 
+$METRICS_PATH $WORKING_DIR"/test.bmp" $INPUT_DIR"/0000.png"
+echo "Size:"
+du -hsb $WORKING_DIR"/test.astc"
+du -hsb $INPUT_DIR"/0000.png"
