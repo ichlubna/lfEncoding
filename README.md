@@ -20,4 +20,5 @@ Additional scripts used for measurements.
 - visualQuality - used to measure average times and visual quality 
 - reverseOrder - simple tool that reverses the order of files in a folder - renaming
 - lfBlending.py - implements a simple LF blending algorithm with variable focus value 
+- GPUDecodingTest - compares the decoding performance of GPU accelerated H.265 and JPEG2000
 
