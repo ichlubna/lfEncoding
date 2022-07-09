@@ -1,4 +1,5 @@
 import sys
+import csv
 
 #https://stackoverflow.com/a/25597628/3027604
 def get_averages(csv):
@@ -18,3 +19,15 @@ for file in files:
 		path=sys.argv[1]+"/"+folder+"/"+file
 		res = get_averages(path)
 		print(str(res[1])+"\t"+str(res[0]))
+
+print("times")
+for folder in folders:
+	path=sys.argv[1]+"/"+folder+"/times.csv"
+	res = get_averages(path)
+	print(str(res[1])+"\t"+str(res[2])+"\t"+str(res[0]))
+
+print("blend and size")
+for folder in folders:
+	path=sys.argv[1]+"/"+folder+"/misc.csv"
+	csvFile = list(csv.reader(open(path)))
+	print(str(csvFile[2][1])+"\t"+str(csvFile[2][0])+"\t"+str(csvFile[3][1])+"\t"+str(csvFile[3][0])+"\t"+str(csvFile[1][1])+"\t"+str(csvFile[1][0])+"\t"+"s"+"\t"+str(csvFile[12][0])+"\t"+str(csvFile[14][0])+"\t"+str(int(csvFile[6][0])+int(csvFile[8][0])+int(csvFile[10][0])))
