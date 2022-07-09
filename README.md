@@ -21,5 +21,6 @@ Additional scripts used for measurements.
 - reverseOrder - simple tool that reverses the order of files in a folder - renaming
 - lfBlending.py - implements a simple LF blending algorithm with variable focus value 
 - GPUDecodingTest - compares the decoding performance of GPU accelerated H.265 and JPEG2000
+- timeHEVC.sh - comparison of decoding times between all I and P frames
 - avgCalculator.py - helper script for processing of the measured data - gets avg values from columns in the files
 
