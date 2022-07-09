@@ -1,6 +1,6 @@
 import sys
-import csv
 
+#https://stackoverflow.com/a/25597628/3027604
 def get_averages(csv):
     column_sums = None
     with open(csv) as file:
