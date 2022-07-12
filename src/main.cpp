@@ -20,6 +20,7 @@ int main(int argc, char** argv)
                                 "               Decoded PNG frame(s)\n"
                                 "--factor       Float [0.0-1.0] indicating which view in 1D LF will be decoded\n"
                                 "--crf          H265 CRF value for encoding\n"
+                                "--cpu          Force CPU decoding (in case of GPU problems)\n"
                                 //"--method [NOT FULLY IMPLEMENTED]       0 - Decodes nearest frame, 1 - Decodes two neighbors and blends them\n"
                                 };
         Arguments args(argc, argv);
@@ -33,7 +34,7 @@ int main(int argc, char** argv)
         }
         
         if(args["--factor"])
-            Analyzer analyzer(args["--input"], args["--output"], args["--crf"], args["--factor"], args["--method"]);
+            Analyzer analyzer(args["--input"], args["--output"], args["--crf"], args["--factor"], args["--cpu"]);
         else 
             Analyzer analyzer(args["--input"], args["--output"], args["--crf"]); 
 	}

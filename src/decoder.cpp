@@ -40,13 +40,28 @@ void Decoder::initDecoderParams(AVFormatContext **inputFormatContext, AVCodec **
     auto videoStreamId = av_find_best_stream(*inputFormatContext, AVMEDIA_TYPE_VIDEO, -1, -1, const_cast<const AVCodec**>(inputCodec), 0);
     if(videoStreamId < 0)
         throw std::runtime_error("No video stream available");
-    if(!codec)
+    if(!inputCodec)
         throw std::runtime_error("No suitable codec found");
     *inputCodecContext = avcodec_alloc_context3(*inputCodec);
-    if(!codecContext)
+    if(!inputCodecContext)
         throw std::runtime_error("Cannot allocate codec context memory");
     if(avcodec_parameters_to_context(*inputCodecContext, (*inputFormatContext)->streams[videoStreamId]->codecpar)<0)
         throw std::runtime_error{"Cannot use the file parameters in context"};
+
+    if(GPU)
+    {
+        AVBufferRef *deviceContext;
+        const AVCodecHWConfig *config;
+        for(int i=0;; i++)
+            if(!(config = avcodec_get_hw_config(*inputCodec, i)))
+                throw std::runtime_error("No HW config for codec");
+            else if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == AV_HWDEVICE_TYPE_VDPAU)
+                break;       
+
+        if(av_hwdevice_ctx_create(&deviceContext, config->device_type, NULL, NULL, 0) < 0)
+            throw std::runtime_error("Cannot create HW device");
+        (*inputCodecContext)->hw_device_ctx = av_buffer_ref(deviceContext);
+    }
      if(avcodec_open2(*inputCodecContext, *inputCodec, nullptr) < 0)
         throw std::runtime_error("Cannot open codec.");
 }
@@ -72,8 +87,10 @@ void Decoder::loadPacketData(size_t index, std::vector<uint8_t> *data)
     }
 }
 
-Decoder::Decoder(std::string path)
+Decoder::Decoder(std::string path, bool cpuDecoding)
 {
+    if(cpuDecoding)
+        GPU=false;
     decodingPacket = av_packet_alloc();
     openFile(path);
     initDecoder(path+"/reference.ts");
@@ -87,8 +104,19 @@ Decoder::~Decoder()
     //av_packet_free(&decodingPacket);
 }
 
-void Decoder::saveFrame(AVFrame *frame, std::string path)
-{
+void Decoder::saveFrame(AVFrame *inputFrame, std::string path)
+{ 
+    AVFrame *frame = inputFrame;
+    //std::cerr << av_get_pix_fmt_name(AVPixelFormat(inputFrame->format)) << std::endl;
+
+    if(inputFrame->format == AV_PIX_FMT_VDPAU)
+    {
+        auto swFrame = av_frame_alloc();
+        swFrame->format = AV_PIX_FMT_YUV444P;
+        av_hwframe_transfer_data(swFrame, inputFrame, 0);
+        frame = swFrame;
+    }
+
     auto start = std::chrono::steady_clock::now();
     auto outCodec = avcodec_find_encoder(AV_CODEC_ID_PNG);
     if (!outCodec) 
@@ -252,13 +280,13 @@ void Decoder::decodeFrameClassicKey(float factor, [[maybe_unused]] enum Interpol
     AVCodecContext *classicCodecContext;
 
     initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
-    AVStream *classicStream = classicFormatContext->streams[0];
     auto classicPacket = av_packet_alloc();
     auto classicFrame = av_frame_alloc();
 
     size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
 
     //NOT WORKING
+    //AVStream *classicStream = classicFormatContext->streams[0];
     //size_t seekPosition = (position * classicStream->r_frame_rate.den * classicStream->time_base.den) /(classicStream->r_frame_rate.num * classicStream->time_base.num);
     //av_seek_frame(classicFormatContext, 0, seekPosition, AVSEEK_FLAG_ANY);
     //avformat_seek_file(classicFormatContext, -1, position, position, position, AVSEEK_FLAG_FRAME | AVSEEK_FLAG_BACKWARD);

@@ -71,7 +71,7 @@ void Analyzer::encode(std::string input, std::string output, size_t crf)
     std::cout << "Encoded classic all-key size: total - " << classicKeySize << " bytes" << std::endl;
 }
 
-void Analyzer::decode(std::string input, float factor, int method, std::string outPath)
+void Analyzer::decode(std::string input, float factor, int method, std::string outPath, bool cpuDecoding)
 {
     Decoder::Interpolation methodName;
     switch(method)
@@ -86,7 +86,7 @@ void Analyzer::decode(std::string input, float factor, int method, std::string o
     }
 
     auto start = std::chrono::steady_clock::now();
-    Decoder decoder(input);
+    Decoder decoder(input, cpuDecoding);
     auto end = std::chrono::steady_clock::now();
     std::cout << "Decoding time reference: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
     start = std::chrono::steady_clock::now();
@@ -110,11 +110,12 @@ void Analyzer::decode(std::string input, float factor, int method, std::string o
     std::cout << "Decoding time classic all-key: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
 }
 
-Analyzer::Analyzer(std::string input, std::string output, size_t crf, float factor, int method)
+Analyzer::Analyzer(std::string input, std::string output, size_t crf, float factor, bool cpuDecoding)
 {
+    int method=0;
     if(factor<0)
         encode(input, output, crf);
     else
-        decode(input, factor, method, output);
+        decode(input, factor, method, output, cpuDecoding);
 }
 

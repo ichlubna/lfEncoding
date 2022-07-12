@@ -9,9 +9,9 @@
 class Analyzer
 {
     public:    
-    Analyzer(std::string input, std::string output, size_t crf, float factor=-1, int method=0);
+    Analyzer(std::string input, std::string output, size_t crf, float factor=-1, bool cpuDecoding=false);
     void encode(std::string input, std::string output, size_t crf); 
-    void decode(std::string input, float factor, int method, std::string outPath);
+    void decode(std::string input, float factor, int method, std::string outPath, bool cpuDecoding);
 
     private:
 };
