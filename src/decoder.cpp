@@ -9,6 +9,7 @@ extern "C" {
 #include <filesystem>
 #include <fstream>
 #include <cmath>
+#include <chrono>
 #include "decoder.h"
 #include "utils.h"
 
@@ -198,8 +199,12 @@ void Decoder::decodeFrameClassic(float factor, [[maybe_unused]] enum Interpolati
     size_t counter = -1; 
     bool decoding = true;
     av_read_frame(classicFormatContext, classicPacket);
+    auto start = std::chrono::steady_clock::now();
+    auto end = std::chrono::steady_clock::now();
     while(decoding)
     {
+        if((classicPacket->flags & AV_PKT_FLAG_KEY) == AV_PKT_FLAG_KEY)
+            end = std::chrono::steady_clock::now();
         int err=0;
         while(err == 0)
         {
@@ -231,6 +236,7 @@ void Decoder::decodeFrameClassic(float factor, [[maybe_unused]] enum Interpolati
             }
         }
     }  
+    std::cout << "Seeking time classic: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
     saveFrame(classicFrame, outPath+"/"+std::to_string(counter)+"-classic.png");
     av_packet_free(&classicPacket);
     av_frame_free(&classicFrame);

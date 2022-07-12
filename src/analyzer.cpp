@@ -79,9 +79,12 @@ void Analyzer::decode(std::string input, float factor, int method, std::string o
 
     auto start = std::chrono::steady_clock::now();
     Decoder decoder(input);
-    decoder.decodeFrame(factor, methodName, outPath);
     auto end = std::chrono::steady_clock::now();
-    std::cout << "Decoding time: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
+    std::cout << "Decoding time reference: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
+    start = std::chrono::steady_clock::now();
+    decoder.decodeFrame(factor, methodName, outPath);
+    end = std::chrono::steady_clock::now();
+    std::cout << "Decoding time packet: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
 
     start = std::chrono::steady_clock::now();
     decoder.decodeFrameClassic(factor, methodName, input+"/classic.ts", outPath);
