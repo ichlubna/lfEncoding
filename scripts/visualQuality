@@ -1,16 +1,13 @@
-#/bin/bash
+#!/bin/bash
 #expecting input data as numbered LF images like 0000.png, 0001.png...with camera moving from left to right
-INPUT_DATA="/home/ichlubna/Downloads/frames/class/ten/"
+INPUT_DATA=$1
+OUTPUT_DATA=$2
+mkdir -p $OUTPUT_DATA
 #interpolation parameter - how far are views
-#recommended values:
-#full: pavilion 0.0006, sand 0.002, cars 0.007, bunny 0.0027, class 0.005 
-#fifth: pavilion 0.004, sand 0.011, cars 0.04, bunny 0.01, class 0.065 
-#tenth: pavilion 0.009, sand 0.02, cars 0.07, bunny 0.02, class 0.082 
-INTERPOLATION_DISPLACEMENT=0.02
+INTERPOLATION_DISPLACEMENT=$3
 #the focusing distance
-#recommended values>
-#pavilion 900, sand 00, cars 15000, bunny 3350, class 3900 
-BLENDING_FOCUS=15000
+BLENDING_FOCUS=$4
+
 CODEC_BIN="../build/lfCodec"
 INTERPOLATOR="./interpolate.py"
 LF_BLENDING="./lfBlending.py"
@@ -18,14 +15,14 @@ METRICS_SH="./metrics"
 #https://github.com/myungsub/meta-interpolation
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
-
+#uoravit 5
 for CRF in $(seq 5 7 50); do
 echo "Processing CRF "$CRF
 
 TEMP=$(mktemp -d)
 WORKING_DIR="./working"$CRF
 ENCODED="./encoded"$CRF
-OUTPUT="./output"$CRF
+OUTPUT=$OUTPUT_DATA"/output"$CRF
 
 rm -rf $ENCODED
 rm -rf $OUTPUT
@@ -38,26 +35,31 @@ $CODEC_BIN --input $INPUT_DATA --output $ENCODED --crf $CRF
 INPUT_FILES=($(ls $INPUT_DATA))
 COUNT=$(ls $INPUT_DATA | wc -l)
 COUNT_DEC=$((COUNT-1))
-DECODED=$(mkdir -p $WORKING_DIR"/decoded")
-DIRS=("decoded" "decodedClassic" "decodedAllKey")
-DECODED_CLASSIC=$(mkdir -p $WORKING_DIR"/"${DIRS[1]})
-DECODED_ALLKEY=$(mkdir -p $WORKING_DIR"/"${DIRS[2]})
+DIRS=("proposed" "classic" "classic30" "classicAllKey")
+DIRS_LENGTH=$(( ${#DIRS[@]}-1 ))
+for j in $(seq 0 $DIRS_LENGTH); do
+    mkdir -p $WORKING_DIR"/"${DIRS[j]}
+done
 
 #Measuring decoding times and visual quality of the decoded frames
 for i in $(seq 0 $COUNT_DEC); do
     echo "Decoding: "${INPUT_FILES[i]}
     FACTOR=$(bc -l <<< $i/$COUNT_DEC)
     TIMES=$($CODEC_BIN --input $ENCODED --output $TEMP --factor $FACTOR) 
-    TIME=$(echo $TIMES | grep -o -P '(?<=time:).*?(?=ms)') 
+    TIME=$(echo $TIMES | grep -o -P '(?<=packet:).*?(?=ms)') 
+    TIME_REF=$(echo $TIMES | grep -o -P '(?<=reference:).*?(?=ms)') 
+    TIME_SEEK=$(echo $TIMES | grep -o -P '(?<=seeking:).*?(?=ms)' | sed -n 1p) 
     TIME_CLASSIC=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
+    TIME_SEEKT=$(echo $TIMES | grep -o -P '(?<=seeking:).*?(?=ms)' | sed -n 2p) 
+    TIME_CLASSICT=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
     TIME_ALLKEY=$(echo $TIMES | grep -o -P '(?<=key:).*?(?=ms)')
-    echo $TIME,$TIME_CLASSIC,$TIME_ALLKEY >> $OUTPUT"/times.csv"
-    $METRICS_SH $TEMP"/"$i".png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metrics.csv"
-    $METRICS_SH $TEMP"/"$i"-classic.png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metricsClassic.csv"
-    $METRICS_SH $TEMP"/"$i"-classicAllKey.png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metricsAllKey.csv"
-    mv $TEMP"/"$i".png" $WORKING_DIR"/decoded/"${INPUT_FILES[i]} 
-    mv $TEMP"/"$i"-classic.png" $WORKING_DIR$"/"${DIRS[1]}"/"${INPUT_FILES[i]} 
-    mv $TEMP"/"$i"-classicAllKey.png" $WORKING_DIR"/"${DIRS[2]}"/"${INPUT_FILES[i]} 
+    echo $TIME,$TIME_REF,$TIME_SEEK,$TIME_CLASSIC,$TIME_SEEKT,$TIME_CLASSICT,$TIME_ALLKEY >> $OUTPUT"/times.csv"
+    for j in $(seq 0 $DIRS_LENGTH); do
+        DIR_NAME=${DIRS[j]}
+        DIR=$WORKING_DIR"/"$DIR_NAME
+        $METRICS_SH $TEMP"/"$i"-"$DIR_NAME".png" $INPUT_DATA"/"${INPUT_FILES[i]} >> $OUTPUT"/metrics"$DIR_NAME".csv"
+        mv $TEMP"/"$i-$DIR_NAME".png" $DIR"/"${INPUT_FILES[i]} 
+    done
 done
 
 COUNT_DEC_DEC=$((COUNT_DEC-1))
@@ -65,7 +67,7 @@ COUNT_DEC_DEC=$((COUNT_DEC-1))
 for i in $(seq 0 $COUNT_DEC_DEC); do 
     echo "Interpolating: "${INPUT_FILES[i]}
     python $INTERPOLATOR $INPUT_DATA"/"${INPUT_FILES[i]} $INPUT_DATA"/"${INPUT_FILES[$((i+1))]} $TEMP"/reference.png" $INTERPOLATION_DISPLACEMENT
-    for j in $(seq 0 2); do
+    for j in $(seq 0 $DIRS_LENGTH); do
         DIR=$WORKING_DIR"/"${DIRS[j]}
         python $INTERPOLATOR $DIR"/"${INPUT_FILES[i]} $DIR"/"${INPUT_FILES[$((i+1))]} $TEMP"/testing.png"    
         $METRICS_SH $TEMP"/testing.png" $TEMP"/reference.png" >> $OUTPUT"/interpolationMetrics"${DIRS[j]}".csv"
@@ -97,7 +99,7 @@ done
 REF_FILES=($(ls $REF))
 REF_COUNT=$(ls $REF | wc -l)
 REF_COUNT_DEC=$((REF_COUNT-1))
-for j in $(seq 0 2); do
+for j in $(seq 0 $DIRS_LENGTH); do
     rm -rf $INTER_DIR
     $(mkdir -p $INTER_DIR)
     ffmpeg -i $WORKING_DIR"/"${DIRS[j]}"/%04d.png" -vf "scale=1024x720" $INTER_DIR"/%04d.png"
@@ -116,7 +118,7 @@ BLENDED_REF_FILE=$TEMP/"blendRef.png"
 python $LF_BLENDING $INPUT_DATA $BLENDING_FOCUS $((COUNT_DEC/2)) $BLENDED_REF_FILE
 MISC_LOG=$OUTPUT"/misc.csv"
 echo "Blended" >> $MISC_LOG
-for j in $(seq 0 2); do
+for j in $(seq 0 $DIRS_LENGTH); do
     DIR=$WORKING_DIR"/"${DIRS[j]}
     python $LF_BLENDING $DIR $BLENDING_FOCUS $((COUNT_DEC/2)) $BLENDED_FILE 
     $METRICS_SH $BLENDED_FILE $BLENDED_REF_FILE >> $MISC_LOG
@@ -136,6 +138,9 @@ echo "" >> $MISC_LOG
 echo "Classic" >> $MISC_LOG
 stat --printf="%s" $ENCODED"/classic.ts" >> $MISC_LOG
 echo "" >> $MISC_LOG
+echo "Classic30" >> $MISC_LOG
+stat --printf="%s" $ENCODED"/classic30.ts" >> $MISC_LOG
+echo "" >> $MISC_LOG
 echo "AllKey" >> $MISC_LOG
 stat --printf="%s" $ENCODED"/classicKey.ts" >> $MISC_LOG
 echo "" >> $MISC_LOG
@@ -143,4 +148,6 @@ echo "Frame count" >> $MISC_LOG
 echo $COUNT >> $MISC_LOG
 
 rm -rf $TEMP
+rm -rf $ENCODED
+rm -rf $WORKING_DIR
 done

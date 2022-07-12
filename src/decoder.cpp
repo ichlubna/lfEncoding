@@ -174,7 +174,7 @@ void Decoder::decodeFrame(float factor, enum Interpolation interpolation, std::s
         else if(err < 0)
             throw std::runtime_error("Cannot receive frame");
         if(decoded > 0 || reference)
-            saveFrame(frame, outPath+"/"+std::to_string(indices.front())+".png");//std::to_string(decoded)+".png");
+            saveFrame(frame, outPath+"/"+std::to_string(indices.front())+"-proposed.png");//std::to_string(decoded)+".png");
         decoded++; 
     }
     av_frame_free(&frame);
@@ -236,8 +236,8 @@ void Decoder::decodeFrameClassic(float factor, [[maybe_unused]] enum Interpolati
             }
         }
     }  
-    std::cout << "Seeking time classic: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
-    saveFrame(classicFrame, outPath+"/"+std::to_string(counter)+"-classic.png");
+    std::cout << "Decoding time classic seeking: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
+    saveFrame(classicFrame, outPath+"/"+std::to_string(counter)+"-"+std::filesystem::path(file).stem().string()+".png");
     av_packet_free(&classicPacket);
     av_frame_free(&classicFrame);
 }

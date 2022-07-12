@@ -22,11 +22,11 @@ Encoder::Encoder(uint32_t refID, std::string refFile, size_t inCrf) : referenceI
 {
 }
 
-void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path, bool allKey) const
+void Encoder::encodeClassic(std::set<std::filesystem::path> *sortedFiles, std::string path, size_t keyInterval) const
 {
     PairEncoder::Frame check(*sortedFiles->begin());
     auto rawFrame = check.getFrame();
-    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat, crf, allKey);
+    FFEncoder encoder(rawFrame->width, rawFrame->height, outputPixelFormat, crf, keyInterval);
     FFMuxer muxer(path, encoder.getCodecContext());
     AVPacket *packet;
     size_t sent{0};
@@ -131,14 +131,11 @@ Encoder::FFMuxer::~FFMuxer()
     avformat_free_context(muxerFormatContext); 
 }
 
-Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, size_t crf, bool allKey)
+Encoder::FFEncoder::FFEncoder(size_t width, size_t height, AVPixelFormat pixFmt, size_t crf, size_t keyInterval)
 {
     std::string codecName = "libx265";
     std::string codecParamsName = "x265-params";
-    std::string keyInterval = "1000";
-    if(allKey)
-        keyInterval = "1";
-    std::string codecParams = "log-level=error:keyint="+keyInterval+":min-keyint="+keyInterval+":scenecut=0:crf="+std::to_string(crf);
+    std::string codecParams = "log-level=error:keyint="+std::to_string(keyInterval)+":min-keyint="+std::to_string(keyInterval)+":scenecut=0:crf="+std::to_string(crf);
     codec = avcodec_find_encoder_by_name(codecName.c_str());
     codecContext = avcodec_alloc_context3(codec);
     if(!codecContext)
