@@ -46,14 +46,18 @@ for i in $(seq 0 $COUNT_DEC); do
     echo "Decoding: "${INPUT_FILES[i]}
     FACTOR=$(bc -l <<< $i/$COUNT_DEC)
     TIMES=$($CODEC_BIN --input $ENCODED --output $TEMP --factor $FACTOR) 
-    TIME=$(echo $TIMES | grep -o -P '(?<=packet:).*?(?=ms)') 
-    TIME_REF=$(echo $TIMES | grep -o -P '(?<=reference:).*?(?=ms)') 
-    TIME_SEEK=$(echo $TIMES | grep -o -P '(?<=seeking:).*?(?=ms)' | sed -n 1p) 
-    TIME_CLASSIC=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
-    TIME_SEEKT=$(echo $TIMES | grep -o -P '(?<=seeking:).*?(?=ms)' | sed -n 2p) 
-    TIME_CLASSICT=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
-    TIME_ALLKEY=$(echo $TIMES | grep -o -P '(?<=key:).*?(?=ms)')
-    echo $TIME,$TIME_REF,$TIME_SEEK,$TIME_CLASSIC,$TIME_SEEKT,$TIME_CLASSICT,$TIME_ALLKEY >> $OUTPUT"/times.csv"
+    PROPOSED_TIME_PACKET=$(echo $TIMES | grep -o -P '(?<=packet:).*?(?=ms)') 
+    PROPOSED_TIME_REF=$(echo $TIMES | grep -o -P '(?<=reference:).*?(?=ms)') 
+    PROPOSED_TIME_STORE=$(echo $TIMES | grep -o -P '(?<=Storing:).*?(?=ms)' | sed -n 1p) 
+    CLASSIC_TIME=$(echo $TIMES | grep -o -P '(?<=classic:).*?(?=ms)') 
+    CLASSIC_TIME_SEEK=$(echo $TIMES | grep -o -P '(?<=seeking:).*?(?=ms)' | sed -n 1p) 
+    CLASSIC_TIME_STORE=$(echo $TIMES | grep -o -P '(?<=Storing:).*?(?=ms)' | sed -n 2p) 
+    GOP_TIME=$(echo $TIMES | grep -o -P '(?<=gop:).*?(?=ms)') 
+    GOP_TIME_SEEK=$(echo $TIMES | grep -o -P '(?<=seeking:).*?(?=ms)' | sed -n 2p) 
+    GOP_TIME_STORE=$(echo $TIMES | grep -o -P '(?<=Storing:).*?(?=ms)' | sed -n 3p) 
+    KEY_TIME=$(echo $TIMES | grep -o -P '(?<=key:).*?(?=ms)')
+    KEY_TIME_STORE=$(echo $TIMES | grep -o -P '(?<=Storing:).*?(?=ms)' | sed -n 4p) 
+    echo $PROPOSED_TIME_PACKET,$PROPOSED_TIME_REF,$PROPOSED_TIME_STORE,$CLASSIC_TIME,$CLASSIC_TIME_SEEK,$CLASSIC_TIME_STORE,$GOP_TIME,$GOP_TIME_SEEK,$GOP_TIME_STORE,$KEY_TIME,$KEY_TIME_STORE >> $OUTPUT"/times.csv"
     for j in $(seq 0 $DIRS_LENGTH); do
         DIR_NAME=${DIRS[j]}
         DIR=$WORKING_DIR"/"$DIR_NAME

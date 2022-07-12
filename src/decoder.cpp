@@ -89,6 +89,7 @@ Decoder::~Decoder()
 
 void Decoder::saveFrame(AVFrame *frame, std::string path)
 {
+    auto start = std::chrono::steady_clock::now();
     auto outCodec = avcodec_find_encoder(AV_CODEC_ID_PNG);
     if (!outCodec) 
         throw std::runtime_error("Cannot find output codec");
@@ -121,6 +122,8 @@ void Decoder::saveFrame(AVFrame *frame, std::string path)
     std::ofstream(path, std::ios::binary).write(reinterpret_cast<const char*>(packet->data), packet->size);
     avcodec_free_context(&outContext);
     av_packet_free(&packet);
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Storing: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
 }
 
 void Decoder::decodeFrame(float factor, enum Interpolation interpolation, std::string outPath)

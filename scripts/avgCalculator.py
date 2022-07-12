@@ -27,10 +27,11 @@ for folder in folders:
     count=0
     for row in open(path):
         count+=1
-    print(str(res[3])+"\t"+str(int(res[5])-int(res[4]))+"\t"+str(res[6])+"\t"+str(int(res[0])+int(res[1])/count))
+    print(str(int(res[3])-int(res[4])-int(res[5])) +"\t"+ str(int(res[6])-int(res[7])-int(res[8])) +"\t"+ str(int(res[9])-int(res[10])) +"\t"+ str(int(res[0])+(int(res[1])/count)-int(res[3])))
 
 print("blend and size")
 for folder in folders:
     path=sys.argv[1]+"/"+folder+"/misc.csv"
     csvFile = list(csv.reader(open(path)))
     print(str(csvFile[2][1])+"\t"+str(csvFile[2][0])+"\t"+str(csvFile[3][1])+"\t"+str(csvFile[3][0])+"\t"+str(csvFile[4][1])+"\t"+str(csvFile[4][0])+"\t"+str(csvFile[1][1])+"\t"+str(csvFile[1][0])+"\t"+"s"+"\t"+str(csvFile[13][0])+"\t"+str(csvFile[15][0])+str(csvFile[17][0])+"\t"+"\t"+str(int(csvFile[7][0])+int(csvFile[9][0])+int(csvFile[11][0])))
+
