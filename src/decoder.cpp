@@ -32,9 +32,13 @@ void Decoder::openFile(std::string path)
 
 void Decoder::initDecoderParams(AVFormatContext **inputFormatContext, AVCodec **inputCodec, AVCodecContext **inputCodecContext, std::string inputFile)
 {
+    //av_log_set_level(AV_LOG_TRACE);
     *inputFormatContext = avformat_alloc_context();
     if (avformat_open_input(inputFormatContext, inputFile.c_str(), nullptr, nullptr) != 0)
         throw std::runtime_error("Cannot open file: "+inputFile);
+    
+    (*inputFormatContext)->probesize = 42000000;
+
     if (avformat_find_stream_info(*inputFormatContext, nullptr) < 0) 
         throw std::runtime_error("Cannot find stream info in file: "+inputFile);
     auto videoStreamId = av_find_best_stream(*inputFormatContext, AVMEDIA_TYPE_VIDEO, -1, -1, const_cast<const AVCodec**>(inputCodec), 0);
@@ -55,10 +59,10 @@ void Decoder::initDecoderParams(AVFormatContext **inputFormatContext, AVCodec **
         for(int i=0;; i++)
             if(!(config = avcodec_get_hw_config(*inputCodec, i)))
                 throw std::runtime_error("No HW config for codec");
-            else if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == AV_HWDEVICE_TYPE_VDPAU)
+            else if (config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX && config->device_type == AV_HWDEVICE_TYPE_CUDA)//AV_HWDEVICE_TYPE_VDPAU)
                 break;       
 
-        if(av_hwdevice_ctx_create(&deviceContext, config->device_type, NULL, NULL, 0) < 0)
+            if(av_hwdevice_ctx_create(&deviceContext, config->device_type, NULL, NULL, 0) < 0)
             throw std::runtime_error("Cannot create HW device");
         (*inputCodecContext)->hw_device_ctx = av_buffer_ref(deviceContext);
     }
@@ -106,10 +110,11 @@ Decoder::~Decoder()
 
 void Decoder::saveFrame(AVFrame *inputFrame, std::string path)
 { 
+    auto start = std::chrono::steady_clock::now();
     AVFrame *frame = inputFrame;
     //std::cerr << av_get_pix_fmt_name(AVPixelFormat(inputFrame->format)) << std::endl;
 
-    if(inputFrame->format == AV_PIX_FMT_VDPAU)
+    if(inputFrame->format == AV_PIX_FMT_CUDA)
     {
         auto swFrame = av_frame_alloc();
         swFrame->format = AV_PIX_FMT_YUV444P;
@@ -117,7 +122,6 @@ void Decoder::saveFrame(AVFrame *inputFrame, std::string path)
         frame = swFrame;
     }
 
-    auto start = std::chrono::steady_clock::now();
     auto outCodec = avcodec_find_encoder(AV_CODEC_ID_PNG);
     if (!outCodec) 
         throw std::runtime_error("Cannot find output codec");
