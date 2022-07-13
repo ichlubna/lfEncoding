@@ -15,8 +15,7 @@ METRICS_SH="./metrics"
 #https://github.com/myungsub/meta-interpolation
 #the run_test.sh script needs to be edited to include the correct input dir etc.
 META_DIR="../../meta-interpolation-master"
-#uoravit 5
-for CRF in $(seq 5 7 50); do
+for CRF in $(seq 0 7 49); do
 echo "Processing CRF "$CRF
 
 TEMP=$(mktemp -d)
