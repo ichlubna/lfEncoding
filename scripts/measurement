@@ -9,10 +9,10 @@ TENTH_DISPL=(0.02 0.009 0.02 0.07 0.082)
 DISPL=("${TENTH_DISPL[@]}" "${FIFTH_DISPL[@]}" "${FULL_DISPL[@]}")
 DATASET_DIRS=("bunny" "pavilion" "sand" "cars" "class")
 DATASET_DIRS_LENGTH=$(( ${#DATASET_DIRS[@]}-1 ))
-for j in $(seq 0 $DATASET_DIRS_LENGTH); do
-    DIR=${DATASET_DIRS[j]}
-    for i in $(seq 0 $DATASET_SIZE_DIRS_LENGTH); do
+for i in $(seq 0 $DATASET_SIZE_DIRS_LENGTH); do
     SIZE=${DATASET_SIZE_DIRS[i]}
+    for j in $(seq 0 $DATASET_DIRS_LENGTH); do
+        DIR=${DATASET_DIRS[j]}
         ./visualQuality $DATASET"/"$DIR"/"$SIZE "./"$DIR"-"$SIZE ${DISPL[$(( $j+$i*($DATASET_DIRS_LENGTH+1) ))]} ${FOCUSES[j]}
     done
 done

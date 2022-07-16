@@ -88,7 +88,7 @@ void Encoder::save(std::string path)
 {
     //lfo contains the offsets into lfp (packet data)
     //the last offset is the index of the reference frame
-    offsets.push_back(data.size()-1);
+    offsets.push_back(data.size());
     offsets.push_back(referenceIndex);
     gzFile f = gzopen((path+"/offsets.lfo").c_str(), "wb");
     gzwrite(f, reinterpret_cast<uint8_t*>(offsets.data()), offsets.size()*4);
