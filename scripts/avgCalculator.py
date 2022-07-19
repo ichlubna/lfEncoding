@@ -18,7 +18,7 @@ for file in files:
     for folder in folders:
         path=sys.argv[1]+"/"+folder+"/"+file
         res = get_averages(path)
-        print(str(res[1])+"\t"+str(res[0]))
+        print(str(res[1])+"\t"+str(res[0])+"\t"+str(res[2]))
 
 print("times")
 for folder in folders:
@@ -33,5 +33,5 @@ print("blend and size")
 for folder in folders:
     path=sys.argv[1]+"/"+folder+"/misc.csv"
     csvFile = list(csv.reader(open(path)))
-    print(str(csvFile[2][1])+"\t"+str(csvFile[2][0])+"\t"+str(csvFile[3][1])+"\t"+str(csvFile[3][0])+"\t"+str(csvFile[4][1])+"\t"+str(csvFile[4][0])+"\t"+str(csvFile[1][1])+"\t"+str(csvFile[1][0])+"\t"+"s"+"\t"+str(csvFile[13][0])+"\t"+str(csvFile[15][0])+"\t"+str(csvFile[17][0])+"\t"+"\t"+str(int(csvFile[7][0])+int(csvFile[9][0])+int(csvFile[11][0])))
+    print(str(csvFile[2][1])+"\t"+str(csvFile[2][0])+"\t"+str(csvFile[2][2])+"\t"+str(csvFile[3][1])+"\t"+str(csvFile[3][0])+"\t"+str(csvFile[3][2])+"\t"+str(csvFile[4][1])+"\t"+str(csvFile[4][0])+"\t"+str(csvFile[4][2])+"\t"+str(csvFile[1][1])+"\t"+str(csvFile[1][0])+"\t"+str(csvFile[1][2])+"\t"+str(csvFile[13][0])+"\t"+str(csvFile[15][0])+"\t"+str(csvFile[17][0])+"\t"+str(int(csvFile[7][0])+int(csvFile[9][0])+int(csvFile[11][0])))
 
