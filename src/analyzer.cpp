@@ -93,16 +93,19 @@ void Analyzer::decode(std::string input, float factor, int method, std::string o
     decoder.decodeFrame(factor, methodName, outPath);
     end = std::chrono::steady_clock::now();
     std::cout << "Decoding time packet: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
+    std::cout << "_______________" << std::endl;
 
     start = std::chrono::steady_clock::now();
     decoder.decodeFrameClassic(factor, methodName, input+"/classic.ts", outPath);
     end = std::chrono::steady_clock::now();
     std::cout << "Decoding time classic: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
+    std::cout << "_______________" << std::endl;
     
     start = std::chrono::steady_clock::now();
     decoder.decodeFrameClassic(factor, methodName, input+"/classic30.ts", outPath);
     end = std::chrono::steady_clock::now();
     std::cout << "Decoding time classic gop: " << std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count() << "ms" << std::endl;
+    std::cout << "_______________" << std::endl;
     
     start = std::chrono::steady_clock::now();
     decoder.decodeFrameClassicKey(factor, methodName, input+"/classicKey.ts", outPath);

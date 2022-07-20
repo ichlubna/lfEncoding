@@ -56,7 +56,11 @@ for i in $(seq 0 $COUNT_DEC); do
     GOP_TIME_STORE=$(echo $TIMES | grep -o -P '(?<=Storing:).*?(?=ms)' | sed -n 3p) 
     KEY_TIME=$(echo $TIMES | grep -o -P '(?<=key:).*?(?=ms)')
     KEY_TIME_STORE=$(echo $TIMES | grep -o -P '(?<=Storing:).*?(?=ms)' | sed -n 4p) 
-    echo $PROPOSED_TIME_PACKET,$PROPOSED_TIME_REF,$PROPOSED_TIME_STORE,$CLASSIC_TIME,$CLASSIC_TIME_SEEK,$CLASSIC_TIME_STORE,$GOP_TIME,$GOP_TIME_SEEK,$GOP_TIME_STORE,$KEY_TIME,$KEY_TIME_STORE >> $OUTPUT"/times.csv"
+    PROPOSED_TIME_INIT=$(echo $TIMES | grep -o -P '(?<=Init:).*?(?=ms)' | sed -n 1p) 
+    CLASSIC_TIME_INIT=$(echo $TIMES | grep -o -P '(?<=Init:).*?(?=ms)' | sed -n 2p) 
+    GOP_TIME_INIT=$(echo $TIMES | grep -o -P '(?<=Init:).*?(?=ms)' | sed -n 3p) 
+    KEY_TIME_INIT=$(echo $TIMES | grep -o -P '(?<=Init:).*?(?=ms)' | sed -n 4p) 
+    echo $PROPOSED_TIME_PACKET,$PROPOSED_TIME_REF,$PROPOSED_TIME_STORE,$CLASSIC_TIME,$CLASSIC_TIME_SEEK,$CLASSIC_TIME_STORE,$GOP_TIME,$GOP_TIME_SEEK,$GOP_TIME_STORE,$KEY_TIME,$KEY_TIME_STORE,$PROPOSED_TIME_INIT,$CLASSIC_TIME_INIT,$GOP_TIME_INIT,$KEY_TIME_INIT >> $OUTPUT"/times.csv"
     for j in $(seq 0 $DIRS_LENGTH); do
         DIR_NAME=${DIRS[j]}
         DIR=$WORKING_DIR"/"$DIR_NAME

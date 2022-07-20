@@ -27,7 +27,7 @@ for folder in folders:
     count=0
     for row in open(path):
         count+=1
-    print(str(int(res[3])-int(res[4])-int(res[5])) +"\t"+ str(int(res[6])-int(res[7])-int(res[8])) +"\t"+ str(int(res[9])-int(res[10])) +"\t"+ str(int(res[0])+(int(res[1])/count)-int(res[2])))
+    print(str(int(res[3])-int(res[4])-int(res[5])-int(res[12])) +"\t"+ str(int(res[6])-int(res[7])-int(res[8])-int(res[13])) +"\t"+ str(int(res[9])-int(res[10])-int(res[14])) +"\t"+ str(int(res[0])+((int(res[1])-int(res[11]))/count)-int(res[2])))
 
 print("blend and size")
 for folder in folders:

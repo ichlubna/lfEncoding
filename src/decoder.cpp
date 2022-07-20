@@ -72,7 +72,10 @@ void Decoder::initDecoderParams(AVFormatContext **inputFormatContext, AVCodec **
 
 void Decoder::initDecoder(std::string file)
 {
+    auto startInit = std::chrono::steady_clock::now();
     initDecoderParams(&formatContext, &codec, &codecContext, file);
+    auto endInit = std::chrono::steady_clock::now();
+    std::cout << "Init: " << std::chrono::duration_cast<std::chrono::milliseconds>(endInit-startInit).count() << "ms" << std::endl;
     auto packet = av_packet_alloc();
     av_read_frame(formatContext, packet);
     //av_packet_copy_props(decodingPacket, packet);
@@ -225,9 +228,12 @@ void Decoder::decodeFrameClassic(float factor, [[maybe_unused]] enum Interpolati
     AVCodec *classicCodec;
     AVCodecContext *classicCodecContext;
 
+    auto startInit = std::chrono::steady_clock::now();
     initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
     auto classicPacket = av_packet_alloc();
     auto classicFrame = av_frame_alloc();
+    auto endInit = std::chrono::steady_clock::now();
+    std::cout << "Init: " << std::chrono::duration_cast<std::chrono::milliseconds>(endInit-startInit).count() << "ms" << std::endl;
 
     size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
     //assuming there are no keyframes except for the first one
@@ -282,10 +288,13 @@ void Decoder::decodeFrameClassicKey(float factor, [[maybe_unused]] enum Interpol
     AVFormatContext *classicFormatContext;
     AVCodec *classicCodec;
     AVCodecContext *classicCodecContext;
-
+    
+    auto startInit = std::chrono::steady_clock::now();
     initDecoderParams(&classicFormatContext, &classicCodec, &classicCodecContext, file);
     auto classicPacket = av_packet_alloc();
     auto classicFrame = av_frame_alloc();
+    auto endInit = std::chrono::steady_clock::now();
+    std::cout << "Init: " << std::chrono::duration_cast<std::chrono::milliseconds>(endInit-startInit).count() << "ms" << std::endl;
 
     size_t position {static_cast<size_t>(round(factor*(offsets.size()-2)))};
 
