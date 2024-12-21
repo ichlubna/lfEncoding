@@ -1,0 +1,13 @@
+@ARTICLE{Chlubna2024,
+   author = "Tom\'{a}\v{s} Chlubna and Pavel Zem\v{c}\'{i}k and Tom\'{a}\v{s} Milet",
+   title = "Efficient Random-Access GPU Video Decoding for Light-Field Rendering",
+   pages = "1--14",
+   journal = "Journal of Visual Communication and Image Representation",
+   volume = 2024,
+   number = 102,
+   year = 2024,
+   ISSN = "1047-3203",
+   doi = "10.1016/j.jvcir.2024.104201",
+   language = "english",
+   url = "https://www.fit.vut.cz/research/publication/13227"
+}
